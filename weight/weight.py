@@ -5,6 +5,7 @@ import mysql.connector
 from mysql.connector import Error
 
 app = Flask(__name__, template_folder='templates')
+from flask import redirect, url_for
 
 # Database connection configuration
 def get_db_connection():
@@ -45,6 +46,12 @@ def get_truck_tara(truck_id):
             connection.close()
 
 
+@app.route('/')
+def root_redirect():
+    """Redirect root to weight form"""
+    return redirect(url_for('weight_form'))
+
+
 @app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
@@ -55,6 +62,15 @@ def health():
 def weight_form():
     """Serve the weight form HTML"""
     return render_template('weight_form.html')
+
+
+@app.route('/truck-tara/<truck_id>', methods=['GET'])
+def truck_tara_lookup(truck_id):
+    """Return tara weight for a given truck ID"""
+    tara = get_truck_tara(truck_id)
+    if tara is None:
+        return jsonify({'truck': truck_id, 'tara': None}), 404
+    return jsonify({'truck': truck_id, 'tara': tara})
 
 
 @app.route('/weight', methods=['POST'])
