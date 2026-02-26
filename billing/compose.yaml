@@ -1,0 +1,27 @@
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: billdb
+    volumes:
+      # 1. Initialization script (Runs only on first start)
+      - ./db/billingdb.sql:/docker-entrypoint-initdb.d/billingdb.sql
+      # 2. Persistent data volume (Keeps your data safe)
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - .env
+    depends_on:
+      - db
+
+# Define the named volume here
+volumes:
+  mysql_data:
