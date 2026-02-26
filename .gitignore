@@ -1,0 +1,51 @@
+# === Python ===
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# === Docker & Compose ===
+# Ignore local environment variable files (CRITICAL)
+.env
+.env.local
+.env.*.local
+
+# Ignore the actual data stored by MySQL (mounted as a volume)
+# Change 'db_data/' to match the name used in your docker-compose.yml
+db_data/
+mysql_data/
+
+# Ignore custom container logs
+logs/
+*.log
+
+# === Databases ===
+# Prevent accidental commits of SQL dumps or SQLite files
+*.sql
+*.sqlite3
+# NOTE: Do NOT ignore your 'migrations/' folder if using Alembic or Django
+
+# === Security & OS ===
+# SSH Keys and secrets
+*.pem
+*.key
+secret.txt
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE specific (VS Code / PyCharm)
+.vscode/
+.idea/
