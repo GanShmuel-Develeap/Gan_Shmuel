@@ -1,5 +1,12 @@
-import flask
-from flask import request, jsonify
+from flask import Flask
 
-app = flask.Flask(__name__)
-app.config["DEBUG"] = True
+app=Flask(__name__)
+
+@app.route('/health', methods=['GET'])
+def gethealth():
+    return ['OK',200]
+
+
+if __name__=='__main__':
+    app.run(debug=True)
+
