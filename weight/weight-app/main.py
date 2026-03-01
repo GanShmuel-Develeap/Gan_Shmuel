@@ -25,11 +25,12 @@ def get_conn(retries=30, delay=1):
     raise last_err
 
 @app.get("/")
-def hello():
-    return "Flask + MySQL (docker-compose) ✅\n"
+def home():
+    return "Weight App"
 
-@app.get("/db")
-def db_check():
+@app.route('/health', methods=['GET'])
+#@app.get("/db")
+def get_health():
     conn = get_conn()
     cur = conn.cursor()
 
