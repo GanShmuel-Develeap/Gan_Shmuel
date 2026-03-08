@@ -1,4 +1,6 @@
 #!/bin/bash
+cd "$(dirname "$0")"
+export $(grep -v '^#' ../billing/.env | xargs)
 PROJECT_DIR="$(git rev-parse --show-toplevel)"
 cd $PROJECT_DIR
 
@@ -28,3 +30,4 @@ fi
 # 5. Send Notification
 curl -X POST -H 'Content-type: application/json' \
 --data "{\"text\":\"*EC2 CI Update*: $STATUS on Billing Branch\"}" $SLACK_WEBHOOK_URL
+
