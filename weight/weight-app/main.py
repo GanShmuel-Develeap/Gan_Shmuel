@@ -1,10 +1,11 @@
 import os
 import time
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template, request
 import mysql.connector
 from mysql.connector import Error
-from test_routes import test_bp
+from weight_service import submit_weight_transaction
 from db import get_conn
+from test_routes import test_bp
 
 app = Flask(__name__)
 app.register_blueprint(test_bp)
@@ -28,18 +29,30 @@ def get_health():
     return jsonify(mysql_time=str(now))
 
 
-@app.route('/weight', methods=['GET'])
-def get_all_transactions():
-    conn = get_conn()
-    cur = conn.cursor(dictionary=True)
+@app.route('/weight-form', methods=['GET'])
+def weight_form():
+    """Serve the weight form HTML"""
+    return render_template('weight_form.html')
 
-    cur.execute("SELECT * FROM transactions")
-    rows = cur.fetchall()
 
-    cur.close()
-    conn.close()
+@app.route('/weight-form', methods=['POST'])
+def weight_submit():
+    """Handle weight transaction form submission"""
+    # Get form data
+    direction = request.form.get('direction')
+    truck = request.form.get('truck')
+    containers = request.form.get('containers')
+    bruto = request.form.get('bruto')
+    produce = request.form.get('produce') or 'na'
 
-    return jsonify(rows)
+    # Call the service function
+    result = submit_weight_transaction(direction, truck, containers, bruto, produce)
+
+    # Return appropriate response
+    if result['status'] == 'success':
+        return jsonify(result), 201
+    else:
+        return jsonify(result), 400
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
