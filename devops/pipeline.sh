@@ -1,5 +1,5 @@
 #!/bin/bash
-PROJECT_DIR="/home/ubuntu/Gan_Shmuel"
+PROJECT_DIR="$(git rev-parse --show-toplevel)"
 cd $PROJECT_DIR
 
 # 1. Update the code
@@ -8,10 +8,14 @@ git checkout billing
 git pull origin billing
 
 # 2. Rebuild only what changed
-docker-compose -f billing/docker-compose.yml build billing-service
+echo ${PROJECT_DIR}
+docker compose -f ${PROJECT_DIR}/billing/compose.yaml build web
 
 # 3. Run Unit Tests
-docker-compose -f billing/docker-compose.yml run --rm billing-service pytest > test_report.txt
+docker compose -f ${PROJECT_DIR}/billing/compose.yaml up -d
+docker compose -f ${PROJECT_DIR}/billing/compose.yaml exec web pytest > test_report.txt
+echo "Waiting for web service to initialize..."
+sleep 5
 RESULT=$?
 
 # 4. Logic for Slack (as we discussed)
