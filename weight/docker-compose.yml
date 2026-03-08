@@ -13,7 +13,15 @@ services:
       - dbdata:/var/lib/mysql
       - ./db/weight-init.sql:/docker-entrypoint-initdb.d/weight-init.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-p${MYSQL_ROOT_PASSWORD}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -25,6 +33,8 @@ services:
     env_file: .env
     ports:
       - "5000:5000"
+    volumes:
+      - ./in:/in
     depends_on:
       db:
         condition: service_healthy
