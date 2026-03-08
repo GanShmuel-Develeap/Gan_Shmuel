@@ -17,6 +17,7 @@ def get_conn(retries=30, delay=1):
         try:
             return mysql.connector.connect(**DB_CONFIG)
         except Error as e:
+            print(f"Error connecting to DB: {e}. Retrying in {delay}s...")
             last_err = e
             time.sleep(delay)
     raise last_err
