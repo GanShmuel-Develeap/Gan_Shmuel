@@ -5,6 +5,11 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: billdb
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     volumes:
       # 1. Initialization script (Runs only on first start)
       - ./db/billingdb.sql:/docker-entrypoint-initdb.d/billingdb.sql
@@ -17,10 +22,11 @@ services:
     build: .
     ports:
       - "5000:5000"
-    environment:
+    env_file:
       - .env
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
 # Define the named volume here
 volumes:
