@@ -3,7 +3,7 @@ import time
 from flask import Flask, jsonify, render_template, request
 import mysql.connector
 from mysql.connector import Error
-from weight_service import submit_weight_transaction
+from weight_service import submit_weight_transaction, get_session_info
 from db import get_conn
 from test_routes import test_bp
 
@@ -43,16 +43,29 @@ def weight_submit():
     truck = request.form.get('truck')
     containers = request.form.get('containers')
     bruto = request.form.get('bruto')
+    unit = request.form.get('unit', 'kg')
     produce = request.form.get('produce') or 'na'
 
     # Call the service function
-    result = submit_weight_transaction(direction, truck, containers, bruto, produce)
+    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce)
 
     # Return appropriate response
     if result['status'] == 'success':
         return jsonify(result), 201
     else:
         return jsonify(result), 400
+
+
+@app.route('/session/<session_id>', methods=['GET'])
+def get_session(session_id):
+    """Get session information by session ID"""
+    result = get_session_info(session_id)
+    
+    if result['status'] == 'success':
+        return jsonify(result['data']), 200
+    else:
+        return jsonify(result), 404
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

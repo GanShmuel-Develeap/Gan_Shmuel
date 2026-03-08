@@ -3,7 +3,7 @@ from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 
-def submit_weight_transaction(direction, truck, containers, bruto, produce):
+def submit_weight_transaction(direction, truck, containers, bruto, unit, produce):
     """
     Submit a weight transaction to the database.
 
@@ -12,6 +12,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, produce):
         truck (str): truck license or 'na'
         containers (str): comma-delimited container ids (optional for OUT)
         bruto (int): gross weight
+        unit (str): unit of weight (kg/lbs)
         produce (str): produce type or 'na'
 
     Returns:
@@ -50,17 +51,24 @@ def submit_weight_transaction(direction, truck, containers, bruto, produce):
         # Default produce to 'na' if empty
         produce = produce or 'na'
 
-        # Handle direction logic and calculate truckTara and neto
-        if direction == 'out':
-            # For OUT: weight input is truckTara, bruto is 0
-            truckTara = bruto
-            bruto = 0
-            neto = 'na'  # Can't calculate without knowing actual bruto
+        # Calculate session_id: truck_id + YYYYMMDD
+        if truck and truck != 'na':
+            session_id = f"{truck}_{datetime.now().strftime('%Y%m%d')}"
         else:
-            # For IN and NONE: weight input is bruto, truckTara is 0
+            # For 'na' trucks, use a timestamp-based ID
+            session_id = f"na_{int(datetime.now().timestamp())}"
+
+        # Handle direction logic
+        if direction == 'out':
+            # For OUT: weight input is truckTara
+            truckTara = bruto
+            # Don't calculate neto yet - will be calculated when stored with matching IN
+            neto_db = 0  # Store as 0, will be recalculated if needed
+        else:
+            # For IN and NONE: weight input is bruto, truckTara is always 0
             truckTara = 0
-            # Calculate neto = bruto - truckTara - sum(container_taras)
-            neto = calculate_neto(bruto, truckTara, containers)
+            # For IN/NONE, neto is not calculated, store as 0 (displayed as 'na')
+            neto_db = 0
 
         # Insert into database
         conn = get_conn()
@@ -74,22 +82,21 @@ def submit_weight_transaction(direction, truck, containers, bruto, produce):
             cur = conn.cursor()
             query = """
                 INSERT INTO transactions
-                (datetime, direction, truck, containers, bruto, truckTara, neto, produce)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                (datetime, direction, truck, containers, bruto, truckTara, neto, produce, unit, session_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            
-            # Convert neto to int for DB storage, use 0 if 'na'
-            neto_db = 0 if neto == 'na' else neto
             
             values = (
                 datetime.now(),
                 direction,
                 truck,
                 containers,
-                bruto,
+                bruto if direction != 'out' else 0,  # For OUT, bruto is stored as 0
                 truckTara,
                 neto_db,
-                produce
+                produce,
+                unit,
+                session_id
             )
             cur.execute(query, values)
             conn.commit()
@@ -100,13 +107,11 @@ def submit_weight_transaction(direction, truck, containers, bruto, produce):
             response_data = {
                 'id': str(transaction_id),
                 'truck': truck,
-                'bruto': bruto,
-                'neto': neto
+                'bruto': bruto if direction != 'out' else 0,
+                'neto': 'na',  # Always return 'na' for individual transactions
+                'unit': unit,
+                'session_id': session_id
             }
-            
-            # Only include truckTara for OUT direction
-            if direction == 'out':
-                response_data['truckTara'] = truckTara
 
             return {
                 'status': 'success',
@@ -132,30 +137,6 @@ def submit_weight_transaction(direction, truck, containers, bruto, produce):
         }
 
 
-def calculate_neto(bruto, truckTara, containers_str):
-    """
-    Calculate neto weight: bruto - truckTara - sum(container_taras)
-    Returns 'na' if any container tara is unknown.
-    """
-    try:
-        neto = bruto - truckTara
-        
-        if containers_str:
-            container_ids = [c.strip() for c in containers_str.split(',') if c.strip()]
-            
-            for container_id in container_ids:
-                container_tara = get_container_tara(container_id)
-                if container_tara is None:
-                    # Unknown tara for this container
-                    return 'na'
-                neto -= container_tara
-        
-        return neto
-    except Exception as e:
-        print(f"Error calculating neto: {e}")
-        return 'na'
-
-
 def get_container_tara(container_id):
     """
     Look up container tara weight from containers_registered table.
@@ -174,6 +155,119 @@ def get_container_tara(container_id):
     except Error as e:
         print(f"Error querying container tara: {e}")
         return None
+    finally:
+        if conn.is_connected():
+            conn.close()
+
+
+def get_session_info(session_id):
+    """
+    Get session information by session ID.
+    Returns session data with all transactions.
+    For sessions with both IN and OUT, neto is calculated as:
+    neto = IN.bruto - OUT.truckTara - sum(container_taras)
+    
+    Args:
+        session_id (str): Session ID (truck_YYYYMMDD or na_timestamp)
+    
+    Returns:
+        dict: {'status': 'success'|'error', 'data': session_data or None}
+    """
+    conn = get_conn()
+    if not conn:
+        return {
+            'status': 'error',
+            'message': 'Database connection failed'
+        }
+    
+    try:
+        cur = conn.cursor(dictionary=True)
+        
+        # Get all transactions for this session
+        query = """
+            SELECT id, datetime, direction, truck, containers, bruto, truckTara, neto,
+                   produce, unit, session_id
+            FROM transactions 
+            WHERE session_id = %s 
+            ORDER BY datetime ASC
+        """
+        cur.execute(query, (session_id,))
+        transactions = cur.fetchall()
+        
+        if not transactions:
+            return {
+                'status': 'error',
+                'message': 'Session not found'
+            }
+        
+        # Find IN and OUT transactions
+        in_tx = next((tx for tx in transactions if tx['direction'] == 'in'), None)
+        out_tx = next((tx for tx in transactions if tx['direction'] == 'out'), None)
+        
+        # Calculate neto only if both IN and OUT exist
+        calculated_neto = 'na'
+        if in_tx and out_tx:
+            # neto = IN.bruto - OUT.truckTara - sum(container_taras)
+            # IN.bruto is the total weight in, OUT.truckTara is the total weight out
+            container_taras = 0
+            if in_tx['containers']:
+                container_ids = [c.strip() for c in in_tx['containers'].split(',') if c.strip()]
+                for container_id in container_ids:
+                    tara = get_container_tara(container_id)
+                    if tara is not None:
+                        container_taras += tara
+                    else:
+                        # Can't calculate if any container tara is unknown
+                        calculated_neto = 'na'
+                        break
+            
+            if calculated_neto != 'na':
+                try:
+                    calculated_neto = str(in_tx['bruto'] - out_tx['truckTara'] - container_taras)
+                except:
+                    calculated_neto = 'na'
+        
+        # Build session response
+        session_data = {
+            'session_id': session_id,
+            'truck': transactions[0]['truck'],
+            'transactions': []
+        }
+        
+        # Add each transaction in the response (IN and OUT all return neto='na' individually)
+        for tx in transactions:
+            tx_data = {
+                'id': str(tx['id']),
+                'truck': tx['truck'],
+                'bruto': tx['bruto'],
+                'neto': 'na',  # Individual transactions always show neto as 'na'
+                'unit': tx['unit'],
+                'direction': tx['direction'],
+                'datetime': tx['datetime'].isoformat() if tx['datetime'] else None
+            }
+            
+            session_data['transactions'].append(tx_data)
+        
+        # Add calculated neto at session level if both IN and OUT exist
+        if in_tx and out_tx:
+            session_data['neto'] = calculated_neto
+            session_data['session_summary'] = {
+                'in_weight': in_tx['bruto'],
+                'out_weight': out_tx['truckTara'],
+                'calculated_neto': calculated_neto
+            }
+        
+        return {
+            'status': 'success',
+            'data': session_data
+        }
+        
+    except Error as e:
+        print(f"Error querying session: {e}")
+        return {
+            'status': 'error',
+            'message': f'Database error: {str(e)}'
+        }
     finally:
         if conn.is_connected():
             conn.close()
