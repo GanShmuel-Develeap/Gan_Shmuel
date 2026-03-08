@@ -1,10 +1,14 @@
 from flask import Blueprint, jsonify, request
-from utils import create_provider, update_provider
+from utils import create_provider, update_provider, health_check
 bill_bp = Blueprint('bill', __name__)
 
 @bill_bp.route("/health", methods=["GET"])
 def get_health():
-    return jsonify({"message": "Ok"}), 200
+    alive = health_check()
+    if alive:
+        return jsonify({"message": "Ok"}), 200
+    else:
+        return jsonify({"message": "Failure"}), 500
 
 @bill_bp.route("/provider", methods=["POST"])
 def create_provider_route():
