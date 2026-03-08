@@ -4,60 +4,6 @@ from datetime import datetime, timedelta
 
 test_bp = Blueprint("test", __name__)
 
-@test_bp.route("/containers/mock_known", methods=["POST"])
-def create_known_mock_containers():
-    conn = get_conn()
-    cur = conn.cursor()
-
-    rows = [
-        ("CONT-001", 1000, "kg"),
-        ("CONT-002", 1200, "kg"),
-        ("CONT-003", 900, "kg"),
-        ("CONT-004", 1100, "kg"),
-        ("CONT-005", 5000, "kg"),
-        ("CONT-006", 950, "kg"),
-    ]
-
-    query = """
-        INSERT INTO containers_registered (container_id, weight, unit)
-        VALUES (%s, %s, %s)
-    """
-
-    for r in rows:
-        cur.execute(query, r)
-
-    conn.commit()
-
-    cur.close()
-    conn.close()
-
-    return jsonify(message="Mock containers inserted", count=len(rows)), 201
-
-@test_bp.route("/containers/mock_unknown", methods=["POST"])
-def create_known_mock_containers():
-    conn = get_conn()
-    cur = conn.cursor()
-
-    rows = [
-        ("CONT-007", None, "kg"),
-        ("CONT-008", None, "kg"),
-    ]
-
-    query = """
-        INSERT INTO containers_registered (container_id, weight, unit)
-        VALUES (%s, %s, %s)
-    """
-
-    for r in rows:
-        cur.execute(query, r)
-
-    conn.commit()
-
-    cur.close()
-    conn.close()
-
-    return jsonify(message="Mock containers inserted", count=len(rows)), 201
-
 @test_bp.route("/transactions/mock10", methods=["POST"])
 def create_mock_transactions():
     conn = get_conn()
@@ -125,3 +71,57 @@ def create_mock_transaction():
     conn.close()
 
     return jsonify(message="Mock transaction created", id=new_id), 201
+
+@test_bp.route("/containers/mock_known", methods=["POST"])
+def create_known_mock_containers_known():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    rows = [
+        ("CONT-001", 1000, "kg"),
+        ("CONT-002", 1200, "kg"),
+        ("CONT-003", 900, "kg"),
+        ("CONT-004", 1100, "kg"),
+        ("CONT-005", 5000, "kg"),
+        ("CONT-006", 950, "kg"),
+    ]
+
+    query = """
+        INSERT INTO containers_registered (container_id, weight, unit)
+        VALUES (%s, %s, %s)
+    """
+
+    for r in rows:
+        cur.execute(query, r)
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return jsonify(message="Mock containers inserted", count=len(rows)), 201
+
+@test_bp.route("/containers/mock_unknown", methods=["POST"])
+def create_known_mock_containers_unknown():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    rows = [
+        ("CONT-007", None, "kg"),
+        ("CONT-008", None, "kg"),
+    ]
+
+    query = """
+        INSERT INTO containers_registered (container_id, weight, unit)
+        VALUES (%s, %s, %s)
+    """
+
+    for r in rows:
+        cur.execute(query, r)
+
+    conn.commit()
+
+    cur.close()
+    conn.close()
+
+    return jsonify(message="Mock containers inserted", count=len(rows)), 201

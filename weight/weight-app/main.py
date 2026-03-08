@@ -9,7 +9,7 @@ from db import get_conn
 
 app = Flask(__name__)
 app.register_blueprint(test_bp)
-
+print(app.url_map)
 
 @app.get("/")
 def home():
@@ -87,5 +87,23 @@ def get_all_transactions():
         for row in rows
     ])
 
+@app.route('/containers', methods=['GET'])
+def get_containers():
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("""
+        SELECT container_id, weight, unit
+        FROM containers_registered
+        ORDER BY container_id
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
+    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
