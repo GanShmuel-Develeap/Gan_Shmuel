@@ -29,22 +29,6 @@ def get_health():
     return jsonify(mysql_time=str(now))
 
 
-@app.route('/weight_basic', methods=['GET'])
-def get_all_transactions_basic():
-    conn = get_conn()
-    cur = conn.cursor(dictionary=True)
-
-    cur.execute("SELECT * FROM transactions")
-    rows = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return jsonify(rows)
-
-from datetime import datetime
-from flask import request, jsonify
-
 @app.route('/weight', methods=['GET'])
 def get_all_transactions():
     now = datetime.now()
@@ -70,23 +54,40 @@ def get_all_transactions():
         """,
         [t1, t2] + directions
     )
-
     rows = cur.fetchall()
+
+    cur.execute("SELECT container_id, weight FROM containers_registered")
+    container_rows = cur.fetchall()
+
     cur.close()
     conn.close()
+
+    container_weights = {}
+    for row in container_rows:
+        container_weights[row["container_id"]] = row["weight"]
 
     return jsonify([
         {
             "id": row["id"],
             "direction": row["direction"],
             "bruto": row["bruto"],
-            "neto": row["neto"] if row["neto"] is not None else "na",
+            "neto": get_neto(row["containers"], row["neto"], container_weights),
             "produce": row["produce"],
             "containers": row["containers"].split(",") if row["containers"] else []
         }
         for row in rows
     ])
 
+def get_neto(containers_str, neto, container_weights):
+    if not containers_str:
+        return neto
+
+    for c in containers_str.split(","):
+        if c not in container_weights or container_weights[c] is None:
+            return "na"
+
+    return neto
+    
 @app.route('/containers', methods=['GET'])
 def get_containers():
     conn = get_conn()
