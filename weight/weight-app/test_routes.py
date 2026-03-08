@@ -12,19 +12,19 @@ def create_mock_transactions():
     base = datetime(2026, 3, 8, 8, 0, 0)
 
     rows = [
-    #   (datetime,                  direction, truck,        containers,       bruto,truckTara,neto, produce, session_id)
-        (base + timedelta(minutes=10), "out", "TRUCK-1", "CONT-001,CONT-002",  20000, 10000, 7000, "Apples", 1),        
-        (base + timedelta(minutes=20), "in",  "TRUCK-1", "CONT-001,CONT-002",  20000, 10000, 7000, "Apples", 1),   
-        (base + timedelta(minutes=40), "out", "TRUCK-2", "CONT-003,CONT-004",  30000, 12000, 11000, "Bananas", 2),
-        (base + timedelta(minutes=50), "in",  "TRUCK-2", "CONT-003,CONT-004",  30000, 12000, 11000, "Bananas", 2),     
-        (base + timedelta(minutes=70), "out", "TRUCK-3", "CONT-005,CONT-006",  30000, 12000, 18000, "Oranges", 3),
-        (base + timedelta(minutes=80), "in",  "TRUCK-3", "CONT-005,CONT-006",  30000, 12000, 18000, "Oranges", 3),
+    #   (datetime,                  direction, unit, truck,        containers,       bruto,truckTara,neto, produce, session_id)
+        (base + timedelta(minutes=10), "out", "kg", "TRUCK-1", "CONT-001,CONT-002",  20000, 10000, 7000, "Apples", 1),        
+        (base + timedelta(minutes=20), "in",  "kg", "TRUCK-1", "CONT-001,CONT-002",  20000, 10000, 7000, "Apples", 1),   
+        (base + timedelta(minutes=40), "out", "kg", "TRUCK-2", "CONT-003,CONT-004",  30000, 12000, 11000, "Bananas", 2),
+        (base + timedelta(minutes=50), "in",  "kg", "TRUCK-2", "CONT-003,CONT-004",  30000, 12000, 11000, "Bananas", 2),     
+        (base + timedelta(minutes=70), "out", "kg", "TRUCK-3", "CONT-005,CONT-006",  30000, 12000, 18000, "Oranges", 3),
+        (base + timedelta(minutes=80), "in",  "kg", "TRUCK-3", "CONT-005,CONT-006",  30000, 12000, 18000, "Oranges", 3),
     ]
 
     query = """
         INSERT INTO transactions
-        (datetime, direction, truck, containers, bruto, truckTara, neto, produce, session_id)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        (datetime, direction, unit, truck, containers, bruto, truckTara, neto, produce, session_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """
 
     for r in rows:
@@ -34,7 +34,7 @@ def create_mock_transactions():
     cur.close()
     conn.close()
 
-    return jsonify(message="10 mock transactions inserted"), 201
+    return jsonify(message="6 mock transactions inserted"), 201
 
 @test_bp.route("/transactions/mock", methods=["POST"])
 def create_mock_transaction():
@@ -43,13 +43,14 @@ def create_mock_transaction():
 
     query = """
         INSERT INTO transactions
-        (datetime, direction, truck, containers, bruto, truckTara, neto, produce, session_id)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        (datetime, direction, unit, truck, containers, bruto, truckTara, neto, produce, session_id)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     values = (
         "2026-03-08 10:30:00",
         "in",
+        "kg",
         "TRUCK-123",
         "CONT-001,CONT-002",
         30000,

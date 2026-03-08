@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `truck` varchar(50) DEFAULT NULL,
   `containers` varchar(10000) DEFAULT NULL,
   `bruto` int(12) DEFAULT NULL,
+  `unit` varchar(10) DEFAULT NULL,
   `truckTara` int(12) DEFAULT NULL,
   `neto` int(12) DEFAULT NULL,
   `produce` varchar(50) DEFAULT NULL,

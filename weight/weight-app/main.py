@@ -46,7 +46,7 @@ def get_all_transactions():
     placeholders = ",".join(["%s"] * len(directions))
     cur.execute(
         f"""
-        SELECT id, direction, bruto, neto, produce, containers
+        SELECT id, direction, bruto, neto, unit, produce, containers
         FROM transactions
         WHERE datetime BETWEEN %s AND %s
         AND direction IN ({placeholders})
@@ -71,23 +71,29 @@ def get_all_transactions():
             "id": row["id"],
             "direction": row["direction"],
             "bruto": row["bruto"],
-            "neto": get_neto(row["containers"], row["neto"], container_weights),
+            "neto": get_neto(row["containers"], row["neto"], row["unit"], container_weights),
             "produce": row["produce"],
             "containers": row["containers"].split(",") if row["containers"] else []
         }
         for row in rows
     ])
 
-def get_neto(containers_str, neto, container_weights):
+
+def get_neto(containers_str, neto, unit, container_weights):
     if not containers_str:
+        if unit == "lbs" and neto is not None:
+            return round(neto * 0.45359237)
         return neto
 
     for c in containers_str.split(","):
         if c not in container_weights or container_weights[c] is None:
             return "na"
 
+    if unit == "lbs" and neto is not None:
+        return round(neto * 0.45359237)
+
     return neto
-    
+
 @app.route('/containers', methods=['GET'])
 def get_containers():
     conn = get_conn()
