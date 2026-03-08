@@ -210,6 +210,7 @@ def get_session_info(session_id):
             # neto = IN.bruto - OUT.truckTara - sum(container_taras)
             # IN.bruto is the total weight in, OUT.truckTara is the total weight out
             container_taras = 0
+            can_calculate = True
             if in_tx['containers']:
                 container_ids = [c.strip() for c in in_tx['containers'].split(',') if c.strip()]
                 for container_id in container_ids:
@@ -218,10 +219,10 @@ def get_session_info(session_id):
                         container_taras += tara
                     else:
                         # Can't calculate if any container tara is unknown
-                        calculated_neto = 'na'
+                        can_calculate = False
                         break
             
-            if calculated_neto != 'na':
+            if can_calculate:
                 try:
                     calculated_neto = str(in_tx['bruto'] - out_tx['truckTara'] - container_taras)
                 except:
