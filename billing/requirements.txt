@@ -8,3 +8,5 @@ mysql-connector-python==9.6.0
 Werkzeug==3.1.6
 pandas
 openpyxl
+pytest==9.0.2
+
