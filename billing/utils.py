@@ -8,6 +8,17 @@ def get_connection():
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME")
     )
+# ---- Health ----
+
+def health_check():
+    try:
+        conn = get_connection()
+        if conn.is_connected():
+            conn.close()
+            return True
+        return False
+    except:
+       return False
 
 # ---- Provider ----
 
