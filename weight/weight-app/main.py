@@ -3,33 +3,18 @@ import time
 from flask import Flask, jsonify
 import mysql.connector
 from mysql.connector import Error
+from test_routes import test_bp
+from db import get_conn
 
 app = Flask(__name__)
+app.register_blueprint(test_bp)
 
-DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "db"),
-    "port": int(os.getenv("DB_PORT", "3306")),
-    "database": os.getenv("DB_NAME", "appdb"),
-    "user": os.getenv("DB_USER", "appuser"),
-    "password": os.getenv("DB_PASSWORD", "apppass"),
-}
-
-def get_conn(retries=30, delay=1):
-    last_err = None
-    for _ in range(retries):
-        try:
-            return mysql.connector.connect(**DB_CONFIG)
-        except Error as e:
-            last_err = e
-            time.sleep(delay)
-    raise last_err
 
 @app.get("/")
 def home():
     return "Weight App"
 
 @app.route('/health', methods=['GET'])
-#@app.get("/db")
 def get_health():
     conn = get_conn()
     cur = conn.cursor()
@@ -41,6 +26,20 @@ def get_health():
     conn.close()
 
     return jsonify(mysql_time=str(now))
+
+
+@app.route('/weight', methods=['GET'])
+def get_all_transactions():
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("SELECT * FROM transactions")
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
