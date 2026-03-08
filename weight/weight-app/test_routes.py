@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 test_bp = Blueprint("test", __name__)
 
-@test_bp.route("/transactions/mock10", methods=["POST"])
+@test_bp.route("/transactions/mock1", methods=["POST"])
 def create_mock_transactions():
     conn = get_conn()
     cur = conn.cursor()
@@ -12,16 +12,13 @@ def create_mock_transactions():
     base = datetime(2026, 3, 8, 8, 0, 0)
 
     rows = [
-        (base + timedelta(minutes=5),  "in",  "TRUCK-1", "CONT-001",           20000, 10000, 10000, "Apples", 1),
-        (base + timedelta(minutes=10), "out", "TRUCK-2", "CONT-002",           21000, 11000, 10000, "Oranges", 1),
-        (base + timedelta(minutes=15), "in",  "TRUCK-3", "CONT-003,CONT-004",  30000, 12000, 18000, "Bananas", 1),
-        (base + timedelta(minutes=20), "out", "TRUCK-4", "CONT-005",           22000, 11000, 11000, "Apples", 1),
-        (base + timedelta(minutes=25), "none","TRUCK-5", "CONT-006",           18000,  9000,  9000, "Pears", 1),
-        (base + timedelta(minutes=30), "in",  "TRUCK-6", "CONT-007",           25000, 12000, 13000, "Apples", 1),
-        (base + timedelta(minutes=35), "out", "TRUCK-7", "CONT-008",           24000, 11000, 13000, "Oranges", 1),
-        (base + timedelta(minutes=40), "in",  "TRUCK-8", "CONT-009",           26000, 12000, 14000, "Bananas", 1),
-        (base + timedelta(minutes=45), "none","TRUCK-9", "CONT-010",           17000,  8000,  9000, "Pears", 1),
-        (base + timedelta(minutes=50), "out", "TRUCK-10","CONT-011,CONT-012",  31000, 13000, 18000, "Apples", 1),
+    #   (datetime,                  direction, truck,        containers,       bruto,truckTara,neto, produce, session_id)
+        (base + timedelta(minutes=10), "out", "TRUCK-1", "CONT-001,CONT-002",  20000, 10000, 7000, "Apples", 1),        
+        (base + timedelta(minutes=20), "in",  "TRUCK-1", "CONT-001,CONT-002",  20000, 10000, 7000, "Apples", 1),   
+        (base + timedelta(minutes=40), "out", "TRUCK-2", "CONT-003,CONT-004",  30000, 12000, 11000, "Bananas", 2),
+        (base + timedelta(minutes=50), "in",  "TRUCK-2", "CONT-003,CONT-004",  30000, 12000, 11000, "Bananas", 2),     
+        (base + timedelta(minutes=70), "out", "TRUCK-3", "CONT-005,CONT-006",  30000, 12000, 18000, "Oranges", 3),
+        (base + timedelta(minutes=80), "in",  "TRUCK-3", "CONT-005,CONT-006",  30000, 12000, 18000, "Oranges", 3),
     ]
 
     query = """
@@ -79,11 +76,9 @@ def create_known_mock_containers_known():
 
     rows = [
         ("CONT-001", 1000, "kg"),
-        ("CONT-002", 1200, "kg"),
-        ("CONT-003", 900, "kg"),
-        ("CONT-004", 1100, "kg"),
-        ("CONT-005", 5000, "kg"),
-        ("CONT-006", 950, "kg"),
+        ("CONT-002", 2000, "kg"),
+        ("CONT-003", 3000, "kg"),
+        ("CONT-004", 4000, "kg"),
     ]
 
     query = """
@@ -107,8 +102,8 @@ def create_known_mock_containers_unknown():
     cur = conn.cursor()
 
     rows = [
-        ("CONT-007", None, "kg"),
-        ("CONT-008", None, "kg"),
+        ("CONT-005", None, "kg"),
+        ("CONT-006", 1000, "kg"),
     ]
 
     query = """
