@@ -6,8 +6,8 @@ cd $PROJECT_DIR
 
 # 1. Update the code
 git fetch origin
-git checkout billing
-git pull origin billing
+git checkout weight
+git pull origin weight
 
 # 2. Rebuild only what changed
 echo ${PROJECT_DIR}
