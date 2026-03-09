@@ -1,5 +1,7 @@
 import mysql.connector
 import os
+from datetime import datetime
+import api_client
 
 def get_connection():
     return mysql.connector.connect(
@@ -162,3 +164,101 @@ def get_rates_file_path():
     latest = max(files, key=os.path.getmtime)
 
     return latest, None
+
+
+# ---- Truck ----
+
+def create_truck(truck_id: str, provider_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM Provider WHERE id = %s", (provider_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return False, "Provider not found"
+
+    cursor.execute("SELECT id FROM Trucks WHERE id = %s", (truck_id,))
+    if cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return False, "Truck already exists"
+
+    cursor.execute("INSERT INTO Trucks (id, provider_id) VALUES (%s, %s)", (truck_id, provider_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True, None
+
+
+def update_truck(truck_id: str, provider_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM Trucks WHERE id = %s", (truck_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return False, "Truck not found"
+
+    cursor.execute("SELECT id FROM Provider WHERE id = %s", (provider_id,))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return False, "Provider not found"
+
+    cursor.execute("UPDATE Trucks SET provider_id = %s WHERE id = %s", (provider_id, truck_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return True, None
+
+
+def _parse_dt(dt_str):
+    """Parse yyyymmddhhmmss string to datetime."""
+    return datetime.strptime(dt_str, "%Y%m%d%H%M%S")
+
+
+def get_truck(truck_id: str, from_dt=None, to_dt=None):
+    """
+    Fetch truck details and its weighing sessions.
+    Args:
+        truck_id (str): Truck identifier.
+        from_dt (str, optional): Start of time range ('yyyymmddhhmmss').
+        to_dt (str, optional): End of time range ('yyyymmddhhmmss').
+
+    Returns:
+        dict: Truck info with 'id', 'tara', and 'sessions', or error message if not found.
+    """
+    # 1. Verify truck exists in billing DB
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id FROM Trucks WHERE id = %s", (truck_id,))
+    truck = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not truck:
+        return None, "Truck not found"
+
+    # 2. Default date range
+    now = datetime.now()
+    t1 = _parse_dt(from_dt) if from_dt else now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    t2 = _parse_dt(to_dt) if to_dt else now
+
+    params = {
+        "from": t1.strftime("%Y%m%d%H%M%S"),
+        "to": t2.strftime("%Y%m%d%H%M%S")
+    }
+
+    # 3. Call Weight API
+    data, err = api_client.get_item(truck_id, params=params)
+    if err:
+        return None, "Truck not found in weight system"
+
+    
+    return {
+        "id": truck_id,
+        "tara": data.get("tara"),
+        "sessions": data.get("sessions", [])
+    }, None
