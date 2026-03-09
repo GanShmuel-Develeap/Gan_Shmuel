@@ -111,7 +111,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    showMessage(`Success! Transaction ID: ${data.id}. Session ID: ${data.session_id}. ${data.message}`, 'success');
+                    showMessage(`Success! Transaction ID: ${data.id}. ${data.message}`, 'success');
                     // Reset form
                     form.reset();
                     updateContainersRequirement();

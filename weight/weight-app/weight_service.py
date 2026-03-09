@@ -65,7 +65,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
         try:
             cur = conn.cursor(dictionary=True)
             if direction in ['in', 'none']:
-                session_id = f"{truck}{timestamp_str}"
+                session_id = f"{truck}_{timestamp_str}"
             elif direction == 'out':
                 if truck and truck != 'na':
                     query = "SELECT session_id FROM transactions WHERE truck = %s AND direction = 'in' ORDER BY datetime DESC LIMIT 1"
@@ -133,7 +133,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                 direction,
                 truck,
                 containers,
-                bruto if direction != 'out' else 0,  # For OUT, bruto is stored as 0
+                bruto,
                 truckTara,
                 neto_db,
                 produce,
@@ -156,6 +156,11 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                     if neto_val != 'na':
                         try:
                             neto_val = int(neto_val)
+                            
+                            update_cur = conn.cursor()
+                            update_cur.execute("UPDATE transactions SET neto = %s WHERE id = %s", (neto_val, transaction_id))
+                            conn.commit()
+                            update_cur.close()
                         except:
                             pass
                     
