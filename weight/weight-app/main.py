@@ -7,6 +7,7 @@ import mysql.connector
 from mysql.connector import Error
 from mock_routes import test_bp
 from db import get_conn
+from weight_service import submit_weight_transaction, get_session_info
 
 app = Flask(__name__)
 app.register_blueprint(test_bp)
