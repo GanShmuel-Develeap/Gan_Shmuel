@@ -9,6 +9,17 @@ def get_bill_connection():
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME", "billdb")
     )
+# ---- Health ----
+
+def health_check():
+    try:
+        conn = get_connection()
+        if conn.is_connected():
+            conn.close()
+            return True
+        return False
+    except:
+       return False
 
 def get_weight_connection():
     return mysql.connector.connect(
