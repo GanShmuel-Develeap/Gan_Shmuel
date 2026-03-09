@@ -21,7 +21,9 @@ services:
       - gan_shmuel_shared
 
   web:
-    build: ./weight-app
+    build:
+      context: .
+      dockerfile: ./weight-app/Dockerfile
     container_name: weight-app
     restart: unless-stopped
     env_file: .env
@@ -34,6 +36,7 @@ services:
         condition: service_healthy
     networks:
       - gan_shmuel_shared
+
 volumes:
   dbdata:
 
