@@ -47,7 +47,7 @@ def get_all_transactions():
     placeholders = ",".join(["%s"] * len(directions))
     cur.execute(
         f"""
-        SELECT id, direction, bruto, neto, unit, produce, containers
+        SELECT id, direction, truck, bruto, neto, unit, produce, containers
         FROM transactions
         WHERE datetime BETWEEN %s AND %s
         AND direction IN ({placeholders})
@@ -71,6 +71,7 @@ def get_all_transactions():
         {
             "truck_id": row["id"],
             "direction": row["direction"],
+            "truck_id": row["truck"],
             "bruto": row["bruto"],
             "neto": get_neto(row["containers"], row["neto"], row["unit"], container_weights),
             "produce": row["produce"],
