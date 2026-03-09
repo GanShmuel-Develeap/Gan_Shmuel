@@ -35,7 +35,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
 
         # Default truck to 'na' if empty
         truck = truck or 'na'
-        
+
         # Default containers to empty string if not provided
         containers = containers or ''
 
@@ -51,26 +51,10 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
         # Default produce to 'na' if empty
         produce = produce or 'na'
 
-        # Calculate session_id: truck_id + YYYYMMDD
-        if truck and truck != 'na':
-            session_id = f"{truck}_{datetime.now().strftime('%Y%m%d')}"
-        else:
-            # For 'na' trucks, use a timestamp-based ID
-            session_id = f"na_{int(datetime.now().timestamp())}"
-
-        # Handle direction logic
-        if direction == 'out':
-            # For OUT: weight input is truckTara
-            truckTara = bruto
-            # Don't calculate neto yet - will be calculated when stored with matching IN
-            neto_db = 0  # Store as 0, will be recalculated if needed
-        else:
-            # For IN and NONE: weight input is bruto, truckTara is always 0
-            truckTara = 0
-            # For IN/NONE, neto is not calculated, store as 0 (displayed as 'na')
-            neto_db = 0
-
-        # Insert into database
+        # Calculate session_id according to timestamp
+        timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        # Connect to DB to handle direction logic
         conn = get_conn()
         if not conn:
             return {
@@ -79,13 +63,71 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
             }
 
         try:
+            cur = conn.cursor(dictionary=True)
+            if direction in ['in', 'none']:
+                session_id = timestamp_str
+            elif direction == 'out':
+                if truck and truck != 'na':
+                    query = "SELECT session_id FROM transactions WHERE truck = %s AND direction = 'in' ORDER BY datetime DESC LIMIT 1"
+                    cur.execute(query, (truck,))
+                    row = cur.fetchone()
+                    if row and row['session_id']:
+                        session_id = row['session_id']
+                    else:
+                        cur.close()
+                        conn.close()
+                        return {
+                            'status': 'error',
+                            'message': 'No prior IN transaction found for this truck'
+                        }
+                else:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'status': 'error',
+                        'message': 'Truck required for OUT direction'
+                    }
+            else:
+                cur.close()
+                conn.close()
+                return {
+                    'status': 'error',
+                    'message': 'Invalid direction'
+                }
+            cur.close()
+        except Error as e:
+            if conn.is_connected():
+                conn.close()
+            return {
+                'status': 'error',
+                'message': f'Database error: {str(e)}'
+            }
+
+        # Handle direction logic
+        if direction == 'out':
+            # For OUT: weight input is truckTara
+            truckTara = bruto
+
+            # For OUT transactions, 'neto' is not calculated at the point of insertion.
+            # It is a session-level property. We store 0 in the transaction record.
+            neto_db = 0
+        else:
+            # For IN and NONE: weight input is bruto, truckTara is always 0
+            truckTara = 0
+            # For IN/NONE, neto is not calculated, store as 0 (displayed as 'na')
+            neto_db = 0
+
+        # We already have a database connection
+
+
+        try:
             cur = conn.cursor()
             query = """
                 INSERT INTO transactions
                 (datetime, direction, truck, containers, bruto, truckTara, neto, produce, unit, session_id)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """
-            
+
             values = (
                 datetime.now(),
                 direction,
@@ -103,15 +145,37 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
             transaction_id = cur.lastrowid
             cur.close()
 
-            # Build response according to API spec
-            response_data = {
-                'id': str(transaction_id),
-                'truck': truck,
-                'bruto': bruto if direction != 'out' else 0,
-                'neto': 'na',  # Always return 'na' for individual transactions
-                'unit': unit,
-                'session_id': session_id
-            }
+            if direction == 'out':
+                # Reuse session logic to calculate neto and get full session details
+                session_info = get_session_info(str(session_id))
+                if session_info['status'] == 'success':
+                    sess_data = session_info['data']
+                    summary = sess_data.get('session_summary', {})
+                    
+                    # For OUT, spec requires: id, truck, bruto (IN weight), truckTara (OUT weight), neto
+                    response_data = {
+                        'id': str(session_id),
+                        'truck': truck,
+                        'bruto': summary.get('in_weight', 0),
+                        'truckTara': summary.get('out_weight', bruto),
+                        'neto': summary.get('calculated_neto', 'na'),
+                    }
+                else:
+                    # Fallback if session lookup fails
+                    response_data = {
+                        'id': str(session_id),
+                        'truck': truck,
+                        'bruto': 0,
+                        'truckTara': bruto,
+                        'neto': 'na',
+                    }
+            else:
+                # IN and NONE
+                response_data = {
+                    'id': str(session_id),
+                    'truck': truck,
+                    'bruto': bruto,
+                }
 
             return {
                 'status': 'success',

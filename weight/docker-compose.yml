@@ -38,6 +38,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - gan_shmuel_shared
 
 volumes:
   dbdata:
+
+networks:
+  gan_shmuel_shared:
+    external: true

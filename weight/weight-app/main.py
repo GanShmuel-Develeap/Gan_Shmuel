@@ -1,12 +1,9 @@
 import os
-import time
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request
 from flask import Flask, jsonify, request
 import json
 import csv
-import mysql.connector
-from mysql.connector import Error
 from weight_service import submit_weight_transaction, get_session_info
 from db import get_conn
 from test_routes import test_bp
@@ -72,7 +69,7 @@ def get_all_transactions():
 
     return jsonify([
         {
-            "id": row["id"],
+            "truck_id": row["id"],
             "direction": row["direction"],
             "bruto": row["bruto"],
             "neto": get_neto(row["containers"], row["neto"], row["unit"], container_weights),
