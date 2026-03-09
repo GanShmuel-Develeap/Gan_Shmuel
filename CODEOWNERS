@@ -1,0 +1,7 @@
+# General Fallback (Optional: assign a global admin or the DevOps lead)
+* @GanShmuel-Develeap/devops-lead
+
+# Folder-Specific Owners
+/devops/    @GanShmuel-Develeap/devops-lead
+/weight/    @GanShmuel-Develeap/weight-lead
+/billing/   @GanShmuel-Develeap/billing-lead
