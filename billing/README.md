@@ -18,6 +18,12 @@ Create a `.env` file in the project root.
 
 ## Run with Docker
 
+Create a network:
+
+```
+docker network create gan_shmuel_shared
+```
+
 Start the services:
 
 ```
