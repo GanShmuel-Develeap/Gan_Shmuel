@@ -1,15 +1,11 @@
 import mysql.connector
 import os
-<<<<<<< HEAD
 from datetime import datetime
 import api_client
-=======
 import pandas as pd
 
 # Folder where Excel rate files are expected to exist
 IN_FOLDER = "/in"
-
->>>>>>> b-rates-api
 
 def get_connection():
     return mysql.connector.connect(
@@ -49,12 +45,8 @@ def update_provider(provider_id: int, name: str):
         return False, "Provider name already taken"
     cursor.execute("UPDATE Provider SET name = %s WHERE id = %s", (name, provider_id))
     conn.commit()
-<<<<<<< HEAD
-    cursor.close()
-    conn.close()
-=======
     cursor.close(); conn.close()
->>>>>>> b-rates-api
+
     return True, None
 
 
