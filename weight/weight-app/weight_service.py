@@ -65,7 +65,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
         try:
             cur = conn.cursor(dictionary=True)
             if direction in ['in', 'none']:
-                session_id = timestamp_str
+                session_id = f"{truck}{timestamp_str}"
             elif direction == 'out':
                 if truck and truck != 'na':
                     query = "SELECT session_id FROM transactions WHERE truck = %s AND direction = 'in' ORDER BY datetime DESC LIMIT 1"
@@ -152,18 +152,25 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                     sess_data = session_info['data']
                     summary = sess_data.get('session_summary', {})
                     
+                    neto_val = summary.get('calculated_neto', 'na')
+                    if neto_val != 'na':
+                        try:
+                            neto_val = int(neto_val)
+                        except:
+                            pass
+                    
                     # For OUT, spec requires: id, truck, bruto (IN weight), truckTara (OUT weight), neto
                     response_data = {
-                        'id': str(session_id),
+                        'id': str(transaction_id),
                         'truck': truck,
                         'bruto': summary.get('in_weight', 0),
                         'truckTara': summary.get('out_weight', bruto),
-                        'neto': summary.get('calculated_neto', 'na'),
+                        'neto': neto_val,
                     }
                 else:
                     # Fallback if session lookup fails
                     response_data = {
-                        'id': str(session_id),
+                        'id': str(transaction_id),
                         'truck': truck,
                         'bruto': 0,
                         'truckTara': bruto,
@@ -172,7 +179,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
             else:
                 # IN and NONE
                 response_data = {
-                    'id': str(session_id),
+                    'id': str(transaction_id),
                     'truck': truck,
                     'bruto': bruto,
                 }
@@ -288,7 +295,7 @@ def get_session_info(session_id):
             
             if can_calculate:
                 try:
-                    calculated_neto = str(in_tx['bruto'] - out_tx['truckTara'] - container_taras)
+                    calculated_neto = int(in_tx['bruto'] - out_tx['truckTara'] - container_taras)
                 except:
                     calculated_neto = 'na'
         
