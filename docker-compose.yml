@@ -1,0 +1,22 @@
+services:
+  billing-service:
+    build: ./billing
+    container_name: billing_app
+    env_file:
+      - ./billing/.env
+    ports:
+      - "5001:5000" # Map host 5001 to container 5000
+    restart: always
+
+  weight-service:
+    build: ./weight/weight-app
+    container_name: weight_app
+    env_file:
+      - ./weight/.env
+    ports:
+      - "5002:5000" # Map host 5002 to container 5000
+    restart: always
+
+networks:
+  default:
+    name: gan_shmuel_network
