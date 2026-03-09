@@ -58,9 +58,6 @@ services:
     env_file: ./weight/.env
     environment:
       - DB_HOST=weight-db
-      - DB_NAME=${MYSQL_DATABASE}
-      - DB_USER=${MYSQL_USER}
-      - DB_PASSWORD=${MYSQL_PASSWORD}
       - DB_PORT=3306
     ports:
       - "5002:5000"
