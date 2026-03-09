@@ -69,7 +69,7 @@ def get_all_transactions():
 
     return jsonify([
         {
-            "truck_id": row["id"],
+            "id": row["id"],
             "direction": row["direction"],
             "truck_id": row["truck"],
             "bruto": row["bruto"],
