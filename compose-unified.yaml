@@ -1,0 +1,81 @@
+services:
+  # --- BILLING STACK ---
+  billing-db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: billdb
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./billing/db/billingdb.sql:/docker-entrypoint-initdb.d/billingdb.sql
+      - billing_mysql_data:/var/lib/mysql
+    networks:
+      - gan_shmuel_network
+
+  billing-service:
+    build: ./billing
+    ports:
+      - "5001:5000"
+    env_file:
+      - ./billing/.env
+    environment:
+      # Mapping to the Python keys in utils.py
+      - DB_HOST=billing-db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=billdb
+    restart: always
+    depends_on:
+      billing-db:
+        condition: service_healthy
+    networks:
+      - gan_shmuel_network
+
+  # --- WEIGHT STACK ---
+  weight-db:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file: ./weight/.env
+    volumes:
+      - weight_dbdata:/var/lib/mysql
+      - ./weight/db/weight-init.sql:/docker-entrypoint-initdb.d/weight-init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - gan_shmuel_network
+
+  weight-service:
+    build: ./weight/weight-app
+    restart: unless-stopped
+    env_file: ./weight/.env
+    environment:
+      - DB_HOST=weight-db
+      - DB_NAME=${MYSQL_DATABASE}
+      - DB_USER=${MYSQL_USER}
+      - DB_PASSWORD=${MYSQL_PASSWORD}
+      - DB_PORT=3306
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./weight/in:/in
+    depends_on:
+      weight-db:
+        condition: service_healthy
+    networks:
+      - gan_shmuel_network
+
+networks:
+  gan_shmuel_network:
+    driver: bridge
+
+volumes:
+  billing_mysql_data:
+  weight_dbdata:
