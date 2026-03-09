@@ -1,5 +1,5 @@
-from flask import Blueprint, jsonify, request
-from utils import create_provider, update_provider
+from flask import Blueprint, jsonify, request,send_file
+from utils import create_provider, update_provider, upload_rates, get_rates_file_path
 bill_bp = Blueprint('bill', __name__)
 
 @bill_bp.route("/health", methods=["GET"])
@@ -33,3 +33,41 @@ def update_provider_route(id):
         return jsonify({"error": err}), status
 
     return jsonify({"message": "updated"}), 200
+
+@bill_bp.route("/rates", methods=["POST"])
+def post_rates():
+    data = request.get_json(silent=True)
+    filename = data.get("file") if data else None
+    if not filename:
+        return jsonify({"error": "file parameter required"}), 400
+
+    try:
+        rows_updated, err = upload_rates(filename)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    if err:
+        status = 404 if "not found" in err.lower() else 400
+        return jsonify({"error": err}), status
+
+    return jsonify({"message": "rates updated", "rows_processed": rows_updated}), 200
+
+
+@bill_bp.route("/rates", methods=["GET"])
+def get_rates():
+    path, err = get_rates_file_path()
+    if err:
+        return jsonify({"error": err}), 404
+
+    return send_file(
+        path,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name="rates.xlsx"
+    )
+
+
+
+
+
+

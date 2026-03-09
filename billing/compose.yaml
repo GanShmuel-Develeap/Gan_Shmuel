@@ -27,6 +27,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    volumes:
+      - ./in:/in
 
 # Define the named volume here
 volumes:

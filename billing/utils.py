@@ -1,7 +1,15 @@
 import mysql.connector
 import os
+<<<<<<< HEAD
 from datetime import datetime
 import api_client
+=======
+import pandas as pd
+
+# Folder where Excel rate files are expected to exist
+IN_FOLDER = "/in"
+
+>>>>>>> b-rates-api
 
 def get_connection():
     return mysql.connector.connect(
@@ -11,46 +19,42 @@ def get_connection():
         database=os.getenv("DB_NAME")
     )
 
+
 # ---- Provider ----
 
 def create_provider(name: str):
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("SELECT id FROM Provider WHERE name = %s", (name,))
     if cursor.fetchone():
-        cursor.close()
-        conn.close()
+        cursor.close(); conn.close()
         return None, "Provider already exists"
-
     cursor.execute("INSERT INTO Provider (name) VALUES (%s)", (name,))
     conn.commit()
     provider_id = cursor.lastrowid
-    cursor.close()
-    conn.close()
+    cursor.close(); conn.close()
     return provider_id, None
 
 
 def update_provider(provider_id: int, name: str):
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("SELECT id FROM Provider WHERE id = %s", (provider_id,))
     if not cursor.fetchone():
-        cursor.close()
-        conn.close()
+        cursor.close(); conn.close()
         return False, "Provider not found"
-
     cursor.execute("SELECT id FROM Provider WHERE name = %s AND id != %s", (name, provider_id))
     if cursor.fetchone():
-        cursor.close()
-        conn.close()
+        cursor.close(); conn.close()
         return False, "Provider name already taken"
-
     cursor.execute("UPDATE Provider SET name = %s WHERE id = %s", (name, provider_id))
     conn.commit()
+<<<<<<< HEAD
     cursor.close()
     conn.close()
+=======
+    cursor.close(); conn.close()
+>>>>>>> b-rates-api
     return True, None
 
 
@@ -157,12 +161,12 @@ def get_rates_file_path():
             full_path = os.path.join(IN_FOLDER, f)
             files.append(full_path)
 
+
     if not files:
         return None, "No rates files found in /in folder"
 
     # Select the most recently modified file
     latest = max(files, key=os.path.getmtime)
-
     return latest, None
 
 
@@ -262,3 +266,5 @@ def get_truck(truck_id: str, from_dt=None, to_dt=None):
         "tara": data.get("tara"),
         "sessions": data.get("sessions", [])
     }, None
+
+
