@@ -1,4 +1,5 @@
 name: gan-shmuel-integration
+
 include:
   - ../billing/compose.yaml
   - ../weight/compose.yaml
@@ -7,12 +8,14 @@ networks:
   gan_shmuel_shared:
     external: true
 
-services:  # A lightweight container to verify connectivity
+services:
   healthcheck:
     image: busybox
     depends_on:
-      billing-app: # Use the actual service names from your sub-composes
+      billing-app:
         condition: service_started
       weight-app:
         condition: service_started
-    command: echo "Integration successful - Both apps are running."
+    networks:
+      - gan_shmuel_shared
+    command: sh -c "echo 'Integration successful'"

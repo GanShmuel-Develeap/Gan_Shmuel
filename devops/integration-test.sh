@@ -31,7 +31,7 @@ else
     echo "⚠️ WARNING: Still seeing the old version in $REPO_ROOT/billing/compose.yaml"
 fi
 
-# NETWORK CREATION
+# ./in CREATION
 echo "🌐 Ensuring gan_shmuel_shared network exists..."
 docker network create gan_shmuel_shared 2>/dev/null || true
 
@@ -42,9 +42,15 @@ docker compose -f compose.integration.yaml up --build -d
 
 echo "✅ Script reached Docker Up!"
 
-# 1. Give the Flask apps a few seconds to finish their internal DB migrations/startup
-echo "⏳ Waiting 10 seconds for Flask apps to stabilize..."
-sleep 10
+echo "⏳ Waiting for services to reach healthy state..."
+# This waits for the healthcheck service (which depends on the apps) to finish
+docker compose -f compose.integration.yaml up healthcheck --exit-code-from healthcheck
+
+if [ $? -ne 0 ]; then
+    echo "❌ Services failed to stabilize in time."
+    cleanup
+    exit 1
+fi
 
 # 2. Run the Unit/Integration tests for Billing
 echo "🧪 Running Billing Tests..."
