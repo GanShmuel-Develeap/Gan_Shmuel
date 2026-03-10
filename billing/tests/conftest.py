@@ -1,8 +1,5 @@
 import pytest
-import sys
-import os
 from app import app
-
 
 @pytest.fixture
 def client():
