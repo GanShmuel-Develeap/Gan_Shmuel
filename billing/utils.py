@@ -39,6 +39,32 @@ def get_connection():
     return get_bill_connection()
 
 
+# ---- List helpers ----
+
+def list_providers():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, name FROM Provider ORDER BY id")
+        rows = cursor.fetchall()
+        cursor.close(); conn.close()
+        return rows, None
+    except Exception as e:
+        return None, str(e)
+
+
+def list_trucks():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT t.id, t.provider_id, p.name AS provider_name FROM Trucks t LEFT JOIN Provider p ON t.provider_id = p.id ORDER BY t.id")
+        rows = cursor.fetchall()
+        cursor.close(); conn.close()
+        return rows, None
+    except Exception as e:
+        return None, str(e)
+
+
 # ---- Provider ----
 
 def create_provider(name: str):
