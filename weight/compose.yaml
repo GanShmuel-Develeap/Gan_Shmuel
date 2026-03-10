@@ -1,0 +1,46 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: weight-mysql
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./db/weight-init.sql:/docker-entrypoint-initdb.d/weight-init.sql
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - gan_shmuel_shared
+
+  web:
+    build:
+      context: .
+      dockerfile: ./weight-app/Dockerfile
+    container_name: weight-app
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./in:/in
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - gan_shmuel_shared
+
+volumes:
+  dbdata:
+
+
+networks:
+  gan_shmuel_shared:
+    external: true
