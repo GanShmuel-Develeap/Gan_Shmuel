@@ -41,7 +41,7 @@ class TestWeightSubmit(unittest.TestCase):
         self.assertEqual(response.json['id'], '100')
         
         # Verify service was called with correct args
-        mock_submit.assert_called_once_with('in', 'T-123', 'C-1,C-2', '5000', 'kg', 'Apples')
+        mock_submit.assert_called_once_with('in', 'T-123', 'C-1,C-2', '5000', 'kg', 'Apples', False)
 
     @patch('main.submit_weight_transaction')
     def test_weight_submit_failure(self, mock_submit):

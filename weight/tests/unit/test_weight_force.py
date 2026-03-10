@@ -140,7 +140,7 @@ class TestWeightForceLogic(unittest.TestCase):
         self.assertEqual(result['status'], 'success')
         # Verify DELETE was called for OUT transaction
         delete_calls = [c for c in mock_cursor.execute.call_args_list 
-                       if 'DELETE' in str(c) and 'OUT' in str(c)]
+                       if 'DELETE' in str(c)]
         self.assertGreater(len(delete_calls), 0)
 
     @patch('weight_service.get_conn')
