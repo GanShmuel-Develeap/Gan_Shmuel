@@ -4,7 +4,7 @@ import os
 from unittest.mock import patch, MagicMock
 
 # Add the weight-app directory to the path so we can import main
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../weight-app')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../weight-app')))
 from main import app
 
 class TestGetUnknown(unittest.TestCase):
