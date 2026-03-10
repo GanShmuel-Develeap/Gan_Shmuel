@@ -15,8 +15,9 @@ services:
       - ./db/billingdb.sql:/docker-entrypoint-initdb.d/billingdb.sql
       # 2. Persistent data volume (Keeps your data safe)
       - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
+
+    networks:
+      - internal_net
 
   web:
     build: .
@@ -27,7 +28,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+    volumes:
+      - ./in:/in
+    networks:
+      - gan_shmuel_shared 
+      - internal_net
 # Define the named volume here
 volumes:
   mysql_data:
+
+networks:
+  gan_shmuel_shared:
+    external: true
+  internal_net:
+    driver: bridge
