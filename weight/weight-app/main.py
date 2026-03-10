@@ -8,6 +8,7 @@ from mock_routes import test_bp
 from db import get_conn
 from flask import Flask, jsonify, request
 from datetime import datetime
+from services.item_service import get_item_data
 
 app = Flask(__name__)
 app.register_blueprint(test_bp)
@@ -171,5 +172,17 @@ def batch_weight():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/item/<item_id>', methods=['GET'])
+def get_item(item_id):
+    t1_str = request.args.get("from")
+    t2_str = request.args.get("to")
+
+    result = get_item_data(item_id, t1_str, t2_str)
+
+    if result is None:
+        return jsonify({"error": "item not found"}), 404
+
+    return jsonify(result)
+    
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
