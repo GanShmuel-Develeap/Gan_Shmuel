@@ -2,7 +2,7 @@ from flask import Flask
 from routes import bill_bp
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 app.register_blueprint(bill_bp)
 
