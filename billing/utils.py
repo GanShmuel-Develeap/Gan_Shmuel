@@ -296,10 +296,10 @@ def get_provider_name(id):
     if name:
         cursor.close()
         conn.close()
-        return name
+        return name,
     cursor.close()
     conn.close()
-    return False, "Provider not found"
+    return False
 
 def get_valid_trucks(weight_list, provider_id):
     # 1. Extract all unique truck IDs from your dictionary list
@@ -527,7 +527,7 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
 
         #total pay from get_bill_data inner calculation 
         "total": total
-    }
+    },None
 
 
 

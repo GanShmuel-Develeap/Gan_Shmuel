@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request,send_file
 from utils import create_provider, update_provider, upload_rates, get_rates_file_path,health_check
 from utils import get_truck, create_truck, update_truck
+from utils import get_bill_data
 
 bill_bp = Blueprint('bill', __name__)
 
@@ -120,16 +121,10 @@ def update_truck_route(truck_id):
 
 @bill_bp.route("/bill/<string:id>", methods=["GET"])
 def get_bill(id):
-
-    
-
-
-
-    from_dt = request.args.get("from")   # yyyymmddhhmmss, default: 1st of month
-    to_dt = request.args.get("to")       # yyyymmddhhmmss, default: now
-
-    truck, err = get_truck(id, from_dt, to_dt)
-    if err:
+    data,err  = get_bill_data(id)
+    if err == "Provider not found" or err == "Truck not found in weight system":
         return jsonify({"error": err}), 404
+    elif err == "error db connection failed":
+        return jsonify({"error": err}), 500
 
-    return jsonify(truck), 200
+    return jsonify(data), 200
