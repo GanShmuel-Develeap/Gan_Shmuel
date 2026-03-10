@@ -4,7 +4,7 @@ import mysql.connector
 from mysql.connector import Error
 
 DB_CONFIG = {
-    "host": os.getenv("DB_HOST", "db"),
+    "host": os.getenv("DB_HOST", "weight-db"),
     "port": int(os.getenv("DB_PORT", "3306")),
     "database": os.getenv("DB_NAME", "appdb"),
     "user": os.getenv("DB_USER", "appuser"),
