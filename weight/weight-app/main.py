@@ -85,6 +85,41 @@ def get_all_transactions():
     ])
 
 
+@app.route('/weight', methods=['POST'])
+def post_weight():
+    """Handle weight transaction API submission"""
+    # Support both JSON and form data
+    data = request.get_json(silent=True) or request.form
+    
+    direction = data.get('direction')
+    truck = data.get('truck') or 'na'
+    containers = data.get('containers')
+    bruto = data.get('weight')  # API uses 'weight', maps to 'bruto' in code
+    unit = data.get('unit', 'kg')
+    force_str = data.get('force', 'false')
+    produce = data.get('produce') or 'na'
+    
+    # Convert force to boolean
+    force = force_str.lower() == 'true' if isinstance(force_str, str) else bool(force_str)
+    
+    # Validate required fields
+    if not direction or bruto is None:
+        return jsonify({'status': 'error', 'message': 'Missing required fields: direction, weight'}), 400
+    
+    try:
+        bruto = int(bruto)
+    except ValueError:
+        return jsonify({'status': 'error', 'message': 'Weight must be a number'}), 400
+    
+    # Call the service function
+    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce, force)
+    
+    if result['status'] == 'success':
+        return jsonify(result), 201
+    else:
+        return jsonify(result), 400
+
+
 def get_neto(containers_str, neto, unit, container_weights):
     if not containers_str:
         if unit == "lbs" and neto is not None:
@@ -137,7 +172,7 @@ def weight_submit():
     produce = request.form.get('produce') or 'na'
 
     # Call the service function
-    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce)
+    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce, False)
 
     # Return appropriate response
     if result['status'] == 'success':

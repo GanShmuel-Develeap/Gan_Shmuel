@@ -3,7 +3,7 @@ from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 
-def submit_weight_transaction(direction, truck, containers, bruto, unit, produce):
+def submit_weight_transaction(direction, truck, containers, bruto, unit, produce, force=False):
     """
     Submit a weight transaction to the database.
 
@@ -64,6 +64,32 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
 
         try:
             cur = conn.cursor(dictionary=True)
+            
+            # Handle force logic for overwriting existing sessions/transactions
+            if direction in ['in', 'none'] and truck != 'na':
+                # Check for open session (in or none without out)
+                query = """
+                SELECT session_id FROM transactions 
+                WHERE truck = %s AND direction IN ('in', 'none') 
+                AND session_id NOT IN (SELECT session_id FROM transactions WHERE direction = 'out')
+                ORDER BY datetime DESC LIMIT 1
+                """
+                cur.execute(query, (truck,))
+                row = cur.fetchone()
+                if row:
+                    if not force:
+                        cur.close()
+                        conn.close()
+                        return {
+                            'status': 'error',
+                            'message': 'Truck has an open session. Use force=true to overwrite.'
+                        }
+                    else:
+                        # Delete the open session
+                        delete_query = "DELETE FROM transactions WHERE session_id = %s"
+                        cur.execute(delete_query, (row['session_id'],))
+                        conn.commit()
+            
             if direction in ['in', 'none']:
                 session_id = f"{truck}_{timestamp_str}"
             elif direction == 'out':
@@ -94,6 +120,25 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                     'status': 'error',
                     'message': 'Invalid direction'
                 }
+            
+            # For OUT, check if already has OUT transaction
+            if direction == 'out':
+                check_query = "SELECT id FROM transactions WHERE session_id = %s AND direction = 'out'"
+                cur.execute(check_query, (session_id,))
+                if cur.fetchone():
+                    if not force:
+                        cur.close()
+                        conn.close()
+                        return {
+                            'status': 'error',
+                            'message': 'Session already has an OUT transaction. Use force=true to overwrite.'
+                        }
+                    else:
+                        # Delete the existing OUT transaction
+                        delete_query = "DELETE FROM transactions WHERE session_id = %s AND direction = 'out'"
+                        cur.execute(delete_query, (session_id,))
+                        conn.commit()
+            
             cur.close()
         except Error as e:
             if conn.is_connected():
