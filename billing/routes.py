@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request,send_file, send_from_directory
 from utils import create_provider, update_provider, upload_rates, get_rates_file_path,health_check
-from utils import get_truck, create_truck, update_truck
+from utils import get_truck, create_truck, update_truck, list_providers, list_trucks
 
 bill_bp = Blueprint('bill', __name__)
 
@@ -12,6 +12,22 @@ def get_health():
         return jsonify({"message": "Ok"}), 200
     else:
         return jsonify({"message": "Failure"}), 500
+
+
+@bill_bp.route("/providers", methods=["GET"])
+def list_providers_route():
+    providers, err = list_providers()
+    if err:
+        return jsonify({"error": err}), 500
+    return jsonify(providers), 200
+
+
+@bill_bp.route("/trucks", methods=["GET"])
+def list_trucks_route():
+    trucks, err = list_trucks()
+    if err:
+        return jsonify({"error": err}), 500
+    return jsonify(trucks), 200
 
 
 @bill_bp.route("/provider", methods=["POST"])

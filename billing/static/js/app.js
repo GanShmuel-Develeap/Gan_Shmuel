@@ -69,6 +69,58 @@ async function apiFetch(path, options = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// ── DROPDOWN POPULATION ────────────────────────
+
+async function populateProviderDropdowns() {
+  try {
+    const { ok, data } = await apiFetch('/providers');
+    if (!ok || !Array.isArray(data)) return;
+    const selects = document.querySelectorAll(
+      '#dash-truck-provider, #create-truck-provider, #update-truck-provider, #update-provider-id'
+    );
+    selects.forEach(sel => {
+      const current = sel.value;
+      const firstOpt = sel.querySelector('option:first-child');
+      sel.innerHTML = '';
+      sel.appendChild(firstOpt);
+      data.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = `#${p.id} — ${p.name}`;
+        sel.appendChild(opt);
+      });
+      if (current) sel.value = current;
+    });
+  } catch {}
+}
+
+async function populateTruckDropdowns() {
+  try {
+    const { ok, data } = await apiFetch('/trucks');
+    if (!ok || !Array.isArray(data)) return;
+    const selects = document.querySelectorAll(
+      '#update-truck-id, #lookup-truck-id'
+    );
+    selects.forEach(sel => {
+      const current = sel.value;
+      const firstOpt = sel.querySelector('option:first-child');
+      sel.innerHTML = '';
+      sel.appendChild(firstOpt);
+      data.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = `${t.id} (${t.provider_name || 'Provider #' + t.provider_id})`;
+        sel.appendChild(opt);
+      });
+      if (current) sel.value = current;
+    });
+  } catch {}
+}
+
+async function populateAllDropdowns() {
+  await Promise.all([populateProviderDropdowns(), populateTruckDropdowns()]);
+}
+
 // ── HEALTH CHECK ───────────────────────────────
 
 async function checkHealth() {
@@ -98,6 +150,7 @@ async function loadDashboard() {
   checkHealth();
   loadProviderCount();
   loadTruckCount();
+  populateAllDropdowns();
 }
 
 async function loadProviderCount() {
@@ -144,6 +197,7 @@ async function createProvider(nameInputId, msgId) {
     document.getElementById(nameInputId).value = '';
     if (currentPage === 'providers') loadProviders();
     loadDashboard();
+    populateAllDropdowns();
   } else {
     showMsg(msgId, 'error', `❌ ${data.error || 'Failed to register provider'}`);
   }
@@ -169,6 +223,7 @@ async function updateProvider() {
   if (ok) {
     showMsg(msgId, 'success', `✅ Provider ${id} updated to "${name}"`);
     loadProviders();
+    populateAllDropdowns();
   } else {
     showMsg(msgId, 'error', `❌ ${data.error || 'Failed to update provider'}`);
   }
@@ -247,6 +302,7 @@ async function createTruck(truckInputId, providerInputId, msgId) {
     document.getElementById(truckInputId).value = '';
     document.getElementById(providerInputId).value = '';
     loadDashboard();
+    populateAllDropdowns();
   } else {
     showMsg(msgId, 'error', `❌ ${data.error || 'Failed to register truck'}`);
   }
@@ -271,6 +327,7 @@ async function updateTruck() {
 
   if (ok) {
     showMsg(msgId, 'success', `✅ Truck "${truckId}" updated to provider #${provider}`);
+    populateAllDropdowns();
   } else {
     showMsg(msgId, 'error', `❌ ${data.error || 'Failed to update truck'}`);
   }
@@ -477,4 +534,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Load initial page
   navigate('dashboard');
+  populateAllDropdowns();
 });
