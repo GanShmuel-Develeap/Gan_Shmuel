@@ -77,7 +77,7 @@ class TestBatchWeight(unittest.TestCase):
         """Test error when the file does not exist."""
         mock_exists.return_value = False
         response = self.app.post('/batch-weight', data={'file': 'missing.json'})
-        self.assertEqual(response.status_code, 704)
+        self.assertEqual(response.status_code, 404)
         self.assertIn(b"File not found", response.data)
 
     @patch('main.os.path.exists')
