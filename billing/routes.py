@@ -85,3 +85,19 @@ def get_truck_route(id):
         return jsonify({"error": err}), 404
 
     return jsonify(truck), 200
+
+@bill_bp.route("/bill/<string:id>", methods=["GET"])
+def get_bill(id):
+
+    
+
+
+
+    from_dt = request.args.get("from")   # yyyymmddhhmmss, default: 1st of month
+    to_dt = request.args.get("to")       # yyyymmddhhmmss, default: now
+
+    truck, err = get_truck(id, from_dt, to_dt)
+    if err:
+        return jsonify({"error": err}), 404
+
+    return jsonify(truck), 200
