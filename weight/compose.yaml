@@ -1,5 +1,5 @@
 services:
-  db:
+  weight-db:
     image: mysql:8.0
     container_name: weight-mysql
     restart: unless-stopped
@@ -20,7 +20,7 @@ services:
     networks:
       - gan_shmuel_shared
 
-  web:
+  weight-app:
     build:
       context: .
       dockerfile: ./weight-app/Dockerfile
@@ -28,11 +28,11 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "5001:5000"
+      - "8081:5000"
     volumes:
       - ./in:/in
     depends_on:
-      db:
+      weight-db:
         condition: service_healthy
     networks:
       - gan_shmuel_shared
