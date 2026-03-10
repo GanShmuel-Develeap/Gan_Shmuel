@@ -7,13 +7,36 @@ import pandas as pd
 # Folder where Excel rate files are expected to exist
 IN_FOLDER = "/in"
 
-def get_connection():
+def get_bill_connection():
     return mysql.connector.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
+        database=os.getenv("DB_NAME", "billdb")
     )
+# ---- Health ----
+
+def health_check():
+    try:
+        conn = get_connection()
+        if conn.is_connected():
+            conn.close()
+            return True
+        return False
+    except:
+       return False
+
+def get_weight_connection():
+    return mysql.connector.connect(
+        host=os.getenv("WEIGHT_DB_HOST", os.getenv("DB_HOST")),
+        user=os.getenv("WEIGHT_DB_USER", os.getenv("DB_USER")),
+        password=os.getenv("WEIGHT_DB_PASSWORD", os.getenv("DB_PASSWORD")),
+        database=os.getenv("WEIGHT_DB_NAME", "weight")
+    )
+
+# Keep backward-compat alias
+def get_connection():
+    return get_bill_connection()
 
 
 # ---- Provider ----
@@ -48,7 +71,6 @@ def update_provider(provider_id: int, name: str):
     cursor.close(); conn.close()
 
     return True, None
-
 
 # ---- Rates ----
 

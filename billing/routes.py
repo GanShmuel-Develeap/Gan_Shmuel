@@ -1,11 +1,18 @@
 from flask import Blueprint, jsonify, request,send_file
-from utils import create_provider, update_provider, upload_rates, get_rates_file_path
+from utils import create_provider, update_provider, upload_rates, get_rates_file_path,health_check
 from utils import get_truck, create_truck, update_truck
+
 bill_bp = Blueprint('bill', __name__)
+
 
 @bill_bp.route("/health", methods=["GET"])
 def get_health():
-    return jsonify({"message": "Ok"}), 200
+    alive = health_check()
+    if alive:
+        return jsonify({"message": "Ok"}), 200
+    else:
+        return jsonify({"message": "Failure"}), 500
+
 
 @bill_bp.route("/provider", methods=["POST"])
 def create_provider_route():
@@ -69,7 +76,7 @@ def get_rates():
 
 @bill_bp.route("/truck/<string:truck_id>", methods=["GET"])
 def get_truck_route(truck_id):
-    # קריאת פרמטרים אופציונליים
+   
     from_dt = request.args.get("from")
     to_dt = request.args.get("to")
 
@@ -93,12 +100,11 @@ def create_truck_route():
     if not success:
         return jsonify({"error": err}), 409
 
-    return jsonify({"id": truck_id}), 201
-
 
 # ---------------- Update Truck ----------------
 @bill_bp.route("/truck/<string:truck_id>", methods=["PUT"])
 def update_truck_route(truck_id):
+
     data = request.get_json()
     provider_id = data.get("provider") if data else None
 
@@ -110,7 +116,6 @@ def update_truck_route(truck_id):
         return jsonify({"error": err}), 404
 
     return jsonify({"id": truck_id, "provider": provider_id}), 200
-
 
 
 
