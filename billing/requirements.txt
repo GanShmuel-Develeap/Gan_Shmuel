@@ -9,3 +9,4 @@ Werkzeug==3.1.6
 requests
 pandas
 openpyxl
+pytest
