@@ -119,10 +119,11 @@ def update_truck_route(truck_id):
     return jsonify({"id": truck_id, "provider": provider_id}), 200
 
 
+# ------------------ Get Bill ------------------
 @bill_bp.route("/bill/<string:id>", methods=["GET"])
 def get_bill(id):
     data,err  = get_bill_data(id)
-    if err == "Provider not found" or err == "Truck not found in weight system":
+    if err == "Provider not found" or err == "Error accessing weight server":
         return jsonify({"error": err}), 404
     elif err == "error db connection failed":
         return jsonify({"error": err}), 500

@@ -296,7 +296,7 @@ def get_provider_name(id):
     if name:
         cursor.close()
         conn.close()
-        return name,
+        return name[0]
     cursor.close()
     conn.close()
     return False
@@ -347,7 +347,7 @@ def get_valid_trucks(weight_list, provider_id):
     #for every truck in weight_list if truck['id'] is in valid_ids_from_db enter it to the list valid_trucks
     valid_trucks = [
         truck for truck in weight_list 
-        if truck['id'] in valid_ids_from_db
+        if truck['truck_id'] in valid_ids_from_db
     ]
     
     return valid_trucks
@@ -426,13 +426,14 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
 
     params = {
         "from": from_time.strftime("%Y%m%d%H%M%S"),
-        "to": to_time.strftime("%Y%m%d%H%M%S")
+        "to": to_time.strftime("%Y%m%d%H%M%S"),
+        "filter":"out"
     }
 
 
     weight_data, err = api_client.get_weights(params=params)
     if err:
-        return None, "Truck not found in weight system"
+        return None, "Error accessing weight server"
 
     valid_trucks = get_valid_trucks(weight_data,id)
 
@@ -440,21 +441,26 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
 
     #Get the count
     truckCount = len(unique_trucks)
-    sessionCount
+    sessionCount = 0
     total = 0
 
 
+    # print(len(valid_trucks))
+    sessionCount = len(valid_trucks)
 
-    # sessionCount += len(get_truck(truck['truck_id'],from_time,to_time)['sessions']) for truck in unique_trucks 
-    for truck in unique_trucks:
-        sessionCount += len(get_truck(truck['truck_id'],from_time,to_time)['sessions'])#check if dict?--------------------------------------
+    # for truck in unique_trucks:
+    #     sessionCount += len(get_truck(truck['truck_id'],from_time,to_time)['sessions'])
     
+    # print(sessionCount)
+
     unique_products = {}
     product_index = 0
     products = []# json.dumps(list)
 
     #get rates for all produce in a dict
-    rates = get_rates_for_provider(id)
+    rates,err = get_rates_for_provider(id)
+    if err:
+        return None,err
 
 
     for truck in valid_trucks:
@@ -464,7 +470,7 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
                 unique_products[truck['produce'] + '_untracked_neto'] = product_index
                 product_index += 1
                 
-                rate = rates['produce']
+                rate = rates.get(truck['produce'], 0)
                 pay = 'na'
                 products.append({
                     'product': truck['produce']+'_untracked_neto',
@@ -483,8 +489,8 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
             unique_products[truck['produce']] = product_index
             product_index += 1
             
-            rate = rates['produce']
-            pay = rates['produce'] * truck['neto'] 
+            rate = rates.get(truck['produce'], 0)
+            pay = rate * truck['neto'] 
             total += pay
             products.append({
                 'product': truck['produce'],
@@ -496,7 +502,7 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
         else:
             temp_index = unique_products[truck['produce']]
 
-            pay = rates['produce'] * truck['neto']
+            pay = rates.get(truck['produce'], 0) * truck['neto']
             total += pay
             products[temp_index]['count'] += 1
             products[temp_index]['amount'] += truck['neto']
