@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file, send_from_directory
 from utils import create_provider, update_provider, create_truck, update_truck, get_truck, health_check
 
 bill_bp = Blueprint('bill', __name__)
@@ -85,3 +85,8 @@ def get_truck_route(id):
         return jsonify({"error": err}), 404
 
     return jsonify(truck), 200
+
+@bill_bp.route('/')
+def serve_frontend():
+    return send_from_directory('static', 'index.html')
+
