@@ -282,7 +282,10 @@ def get_truck(truck_id: str, from_dt=None, to_dt=None):
     }, None
 
 
-# ---- Bill ----
+# ---- Bill ---- 
+
+
+
 
 def get_provider_name(id):
     conn = get_connection()
@@ -363,23 +366,69 @@ def get_unique_trucks(valid_trucks):
     # 3. Get the unique_trucks
     return unique_trucks
 
-def get_bill_data(id,t1,t2):
-    id = id#remove used for visual organising
+def get_rates_for_provider(id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+
+        # Insert all rows at once
+        query = f"""
+            SELECT * 
+            FROM rates
+        """
+
+        cursor.execute(query)
+        
+        # Store results in a set for lightning-fast cross-referencing
+
+        # for every row in cursor.fetchall() get the first item row[0] 'id' 
+        rates = {}
+
+        # for rate in cursor.fetchall():
+        #     if rate['scope'] == None:
+        #         if rate['product'] not in rates:
+        #             rates[rate['product']]['rate'] = rate['rate']
+
+        #     elif rate['scope'] == id:
+        #         rates[rate['product']]['rate'] = rate['rate']
+
+
+        for row in cursor.fetchall():
+            product = row['product']
+            scope = row['scope']
+            rate = row['rate']
+
+            if scope is None:
+                if product not in rates: # Only set default if not already set by an ID
+                    rates[product] = rate
+            elif scope == id:
+                rates[product] = rate # Override whatever is there
+
+    except Exception:
+        return None ,'error db connection failed'
+
+    finally:
+        cursor.close(); conn.close()
+
+    # Return number of inserted rows
+    return rates, None
+
+def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
+    id = truck_id
     name = get_provider_name(id)
     if not name:
         return None, "Provider not found"
 
     now = datetime.now()
-    t1 = _parse_dt(from_dt) if from_dt else now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    t2 = _parse_dt(to_dt) if to_dt else now
+    from_time = _parse_dt(from_dt) if from_dt else now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    to_time = _parse_dt(to_dt) if to_dt else now
 
     params = {
-        "from": t1.strftime("%Y%m%d%H%M%S"),
-        "to": t2.strftime("%Y%m%d%H%M%S")
+        "from": from_time.strftime("%Y%m%d%H%M%S"),
+        "to": to_time.strftime("%Y%m%d%H%M%S")
     }
 
-    from_time = t1
-    to_time = t2
 
     weight_data, err = api_client.get_weights(params=params)
     if err:
@@ -398,23 +447,24 @@ def get_bill_data(id,t1,t2):
 
     # sessionCount += len(get_truck(truck['truck_id'],from_time,to_time)['sessions']) for truck in unique_trucks 
     for truck in unique_trucks:
-        sessionCount += len(get_truck(truck['truck_id'],from_time,to_time)['sessions'])
+        sessionCount += len(get_truck(truck['truck_id'],from_time,to_time)['sessions'])#check if dict?--------------------------------------
     
     unique_products = {}
     product_index = 0
     products = []# json.dumps(list)
 
-    rates = get_rates_for_provider(id)#new function get rates for all produce maybe in a dict of dicts #BROKEN----------------------------------------------------------
+    #get rates for all produce in a dict
+    rates = get_rates_for_provider(id)
+
 
     for truck in valid_trucks:
         if truck['neto'] == 'na':
-            #skip?
-            #add new addition to products with untracked neto?
+            #add new addition to products with untracked neto
             if truck['produce'] + '_untracked_neto' not in unique_products:
                 unique_products[truck['produce'] + '_untracked_neto'] = product_index
                 product_index += 1
                 
-                rate = rates['produce']['Rate']#BROKEN-------------------------------------------------------------------------------------
+                rate = rates['produce']
                 pay = 'na'
                 products.append({
                     'product': truck['produce']+'_untracked_neto',
@@ -433,8 +483,8 @@ def get_bill_data(id,t1,t2):
             unique_products[truck['produce']] = product_index
             product_index += 1
             
-            rate = rates['produce']['Rate']#BROKEN-------------------------------------------------------------------------------------
-            pay = rates['produce'] # */+ truck['neto'] find what to do and fix#BROKEN--------------------------------------------------
+            rate = rates['produce']
+            pay = rates['produce'] * truck['neto'] 
             total += pay
             products.append({
                 'product': truck['produce'],
@@ -446,14 +496,12 @@ def get_bill_data(id,t1,t2):
         else:
             temp_index = unique_products[truck['produce']]
 
-            pay = rates['produce'] # */+ truck['neto'] find what to do and fix#BROKEN--------------------------------------------------
+            pay = rates['produce'] * truck['neto']
             total += pay
             products[temp_index]['count'] += 1
             products[temp_index]['amount'] += truck['neto']
             products[temp_index]['pay'] += pay
             
-
-    # unique_products = {truck['produce'] for truck in valid_trucks}
 
     return {
         #provider_id from get_bill_data id paramater
@@ -463,10 +511,10 @@ def get_bill_data(id,t1,t2):
         "name": name,
 
         #time stamp "from" from get_bill_data t1 paramater
-        "from": from_time,
+        "from": params['from'],
 
         #time stamp "to" from get_bill_data t2 paramater
-        "to": to_time,
+        "to": params['to'],
 
         #unique truck count from get_bill_data inner calculation 
         "truckCount": truckCount,
