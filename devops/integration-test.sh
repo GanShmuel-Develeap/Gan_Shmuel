@@ -5,13 +5,13 @@ set -e
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
 cleanup() {
-    echo "🧹 Running cleanup..."
-    cd "$REPO_ROOT/devops"
-    docker compose -f compose.integration.yaml down || true
+    echo "🧹 Running automated cleanup..."
+    # The -v flag removes the associated volumes!
+    docker compose -f compose.integration.yaml down -v --remove-orphans || true
     git checkout devops
     git branch -D ci-integration-run || true
 }
-#trap cleanup EXIT
+trap cleanup EXIT
 
 echo "🚀 Starting Integration Test..."
 git checkout devops
