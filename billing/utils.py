@@ -1,6 +1,11 @@
 import mysql.connector
 import os
 from datetime import datetime
+import api_client
+import pandas as pd
+
+# Folder where Excel rate files are expected to exist
+IN_FOLDER = "/in"
 
 def get_bill_connection():
     return mysql.connector.connect(
@@ -33,46 +38,38 @@ def get_weight_connection():
 def get_connection():
     return get_bill_connection()
 
+
 # ---- Provider ----
 
 def create_provider(name: str):
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("SELECT id FROM Provider WHERE name = %s", (name,))
     if cursor.fetchone():
-        cursor.close()
-        conn.close()
+        cursor.close(); conn.close()
         return None, "Provider already exists"
-
     cursor.execute("INSERT INTO Provider (name) VALUES (%s)", (name,))
     conn.commit()
     provider_id = cursor.lastrowid
-    cursor.close()
-    conn.close()
+    cursor.close(); conn.close()
     return provider_id, None
 
 
 def update_provider(provider_id: int, name: str):
     conn = get_connection()
     cursor = conn.cursor()
-
     cursor.execute("SELECT id FROM Provider WHERE id = %s", (provider_id,))
     if not cursor.fetchone():
-        cursor.close()
-        conn.close()
+        cursor.close(); conn.close()
         return False, "Provider not found"
-
     cursor.execute("SELECT id FROM Provider WHERE name = %s AND id != %s", (name, provider_id))
     if cursor.fetchone():
-        cursor.close()
-        conn.close()
+        cursor.close(); conn.close()
         return False, "Provider name already taken"
-
     cursor.execute("UPDATE Provider SET name = %s WHERE id = %s", (name, provider_id))
     conn.commit()
-    cursor.close()
-    conn.close()
+    cursor.close(); conn.close()
+
     return True, None
 
 # ---- Rates ----
@@ -178,13 +175,14 @@ def get_rates_file_path():
             full_path = os.path.join(IN_FOLDER, f)
             files.append(full_path)
 
+
     if not files:
         return None, "No rates files found in /in folder"
 
     # Select the most recently modified file
     latest = max(files, key=os.path.getmtime)
-
     return latest, None
+
 
 # ---- Truck ----
 
@@ -241,48 +239,46 @@ def _parse_dt(dt_str):
 
 def get_truck(truck_id: str, from_dt=None, to_dt=None):
     """
-    Returns truck info from billing DB + sessions from weight DB.
-    from_dt, to_dt: optional datetime strings (yyyymmddhhmmss).
-    Defaults: from = 1st of current month 000000, to = now.
+    Fetch truck details and its weighing sessions.
+    Args:
+        truck_id (str): Truck identifier.
+        from_dt (str, optional): Start of time range ('yyyymmddhhmmss').
+        to_dt (str, optional): End of time range ('yyyymmddhhmmss').
+
+    Returns:
+        dict: Truck info with 'id', 'tara', and 'sessions', or error message if not found.
     """
     # 1. Verify truck exists in billing DB
-    bill_conn = get_bill_connection()
-    bill_cursor = bill_conn.cursor(dictionary=True)
-    bill_cursor.execute("SELECT id FROM Trucks WHERE id = %s", (truck_id,))
-    truck = bill_cursor.fetchone()
-    bill_cursor.close()
-    bill_conn.close()
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT id FROM Trucks WHERE id = %s", (truck_id,))
+    truck = cursor.fetchone()
+    cursor.close()
+    conn.close()
 
     if not truck:
         return None, "Truck not found"
 
-    # 2. Apply defaults for date range
+    # 2. Default date range
     now = datetime.now()
     t1 = _parse_dt(from_dt) if from_dt else now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     t2 = _parse_dt(to_dt) if to_dt else now
 
-    # 3. Fetch from weight DB
-    weight_conn = get_weight_connection()
-    weight_cursor = weight_conn.cursor(dictionary=True)
+    params = {
+        "from": t1.strftime("%Y%m%d%H%M%S"),
+        "to": t2.strftime("%Y%m%d%H%M%S")
+    }
 
-    # Sessions in range
-    weight_cursor.execute(
-        "SELECT id FROM transactions WHERE truck = %s AND datetime >= %s AND datetime <= %s",
-        (truck_id, t1, t2)
-    )
-    sessions = [row["id"] for row in weight_cursor.fetchall()]
+    # 3. Call Weight API
+    data, err = api_client.get_item(truck_id, params=params)
+    if err:
+        return None, "Truck not found in weight system"
 
-    # Last known tara (most recent truckTara across all time)
-    weight_cursor.execute(
-        """SELECT truckTara FROM transactions
-           WHERE truck = %s AND truckTara IS NOT NULL
-           ORDER BY datetime DESC LIMIT 1""",
-        (truck_id,)
-    )
-    tara_row = weight_cursor.fetchone()
-    tara = tara_row["truckTara"] if tara_row else None
+    
+    return {
+        "id": truck_id,
+        "tara": data.get("tara"),
+        "sessions": data.get("sessions", [])
+    }, None
 
-    weight_cursor.close()
-    weight_conn.close()
 
-    return {"id": truck_id, "tara": tara, "sessions": sessions}, None
