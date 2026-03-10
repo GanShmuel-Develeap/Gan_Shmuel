@@ -9,7 +9,7 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
     volumes:
       # 1. Initialization script (Runs only on first start)
       - ./db/billingdb.sql:/docker-entrypoint-initdb.d/billingdb.sql
