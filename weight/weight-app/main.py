@@ -1,11 +1,13 @@
 import os
-import time
+from datetime import datetime
+from flask import Flask, jsonify, render_template, request
 import json
 import csv
 import mysql.connector
 from mysql.connector import Error
 from mock_routes import test_bp
 from db import get_conn
+from weight_service import submit_weight_transaction, get_session_info
 from flask import Flask, jsonify, request
 from datetime import datetime
 from services.item_service import get_item_data
@@ -115,6 +117,45 @@ def get_containers():
     conn.close()
 
     return jsonify(rows)
+
+@app.route('/weight-form', methods=['GET'])
+def weight_form():
+    """Serve the weight form HTML"""
+    return render_template('weight_form.html')
+
+
+
+@app.route('/weight-form', methods=['POST'])
+def weight_submit():
+    """Handle weight transaction form submission"""
+    # Get form data
+    direction = request.form.get('direction')
+    truck = request.form.get('truck')
+    containers = request.form.get('containers')
+    bruto = request.form.get('bruto')
+    unit = request.form.get('unit', 'kg')
+    produce = request.form.get('produce') or 'na'
+
+    # Call the service function
+    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce)
+
+    # Return appropriate response
+    if result['status'] == 'success':
+        return jsonify(result), 201
+    else:
+        return jsonify(result), 400
+
+
+@app.route('/session/<session_id>', methods=['GET'])
+def get_session(session_id):
+    """Get session information by session ID"""
+    result = get_session_info(session_id)
+    
+    if result['status'] == 'success':
+        return jsonify(result['data']), 200
+    else:
+        return jsonify(result), 404
+
 
 @app.route('/unknown', methods=['GET'])
 def get_unknown():
