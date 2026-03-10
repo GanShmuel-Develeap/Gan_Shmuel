@@ -116,6 +116,19 @@ def get_containers():
 
     return jsonify(rows)
 
+@app.route('/unknown', methods=['GET'])
+def get_unknown():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("SELECT container_id FROM containers_registered WHERE weight IS NULL")
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([row[0] for row in rows])
+
 @app.route('/batch-weight', methods=['POST'])
 def batch_weight():
     filename = request.values.get('file')
