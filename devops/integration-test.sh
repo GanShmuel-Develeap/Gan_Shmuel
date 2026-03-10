@@ -52,6 +52,6 @@ docker exec gan-shmuel-integration-billing-app-1 pytest || echo "❌ Billing tes
 
 # 3. Run the Unit/Integration tests for Weight
 echo "🧪 Running Weight Tests..."
-docker exec weight-app pytest || echo "❌ Weight tests failed"
+docker exec -e PYTHONPATH=/app weight-app pytest
 
 echo "🏁 All integration steps completed!"
