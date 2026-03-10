@@ -113,6 +113,11 @@ def get_containers():
 
     rows = cur.fetchall()
 
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
+
 @app.route('/weight-form', methods=['GET'])
 def weight_form():
     """Serve the weight form HTML"""
