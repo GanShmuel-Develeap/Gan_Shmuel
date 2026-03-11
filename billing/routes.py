@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request,send_file
 from utils import create_provider, update_provider, upload_rates, get_rates_file_path,health_check
 from utils import get_truck, create_truck, update_truck
-
+import mysql.connector
 bill_bp = Blueprint('bill', __name__)
 
 
@@ -53,7 +53,10 @@ def post_rates():
         rows_updated, err = upload_rates(filename)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-
+    except mysql.connector.IntegrityError as e:
+        return jsonify({"error": f"Invalid provider_id in XL file"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
     if err:
         status = 404 if "not found" in err.lower() else 400
         return jsonify({"error": err}), status
@@ -74,17 +77,7 @@ def get_rates():
         download_name="rates.xlsx"
     )
 
-@bill_bp.route("/truck/<string:truck_id>", methods=["GET"])
-def get_truck_route(truck_id):
-   
-    from_dt = request.args.get("from")
-    to_dt = request.args.get("to")
 
-    truck_data, err = get_truck(truck_id, from_dt=from_dt, to_dt=to_dt)
-    if err:
-        return jsonify({"error": err}), 404
-
-    return jsonify(truck_data), 200
 
 # ---------------- Create Truck ----------------
 @bill_bp.route("/truck", methods=["POST"])
@@ -99,6 +92,7 @@ def create_truck_route():
     success, err = create_truck(truck_id, provider_id)
     if not success:
         return jsonify({"error": err}), 409
+    return jsonify({"message": "Truck created successfully", "id": truck_id}), 201
 
 
 # ---------------- Update Truck ----------------
@@ -117,5 +111,16 @@ def update_truck_route(truck_id):
 
     return jsonify({"id": truck_id, "provider": provider_id}), 200
 
+# ---------------- Get Truck ----------------
+@bill_bp.route("/truck/<string:truck_id>", methods=["GET"])
+def get_truck_route(truck_id):
 
+    from_dt = request.args.get("from")
+    to_dt = request.args.get("to")
+
+    truck_data, err = get_truck(truck_id, from_dt=from_dt, to_dt=to_dt)
+    if err:
+        return jsonify({"error": err}), 404
+
+    return jsonify(truck_data), 200
 
