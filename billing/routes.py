@@ -92,7 +92,8 @@ def create_truck_route():
     success, err = create_truck(truck_id, provider_id)
     if not success:
         return jsonify({"error": err}), 409
-    return jsonify({"message": "Truck created successfully"}), 201
+    return jsonify({"message": "Truck created successfully", "id": truck_id}), 201
+
 
 # ---------------- Update Truck ----------------
 @bill_bp.route("/truck/<string:truck_id>", methods=["PUT"])
