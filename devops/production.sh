@@ -6,7 +6,7 @@ git checkout -B production-live
 # 2. Pull the latest infrastructure and app code
 git fetch origin
 
-git merge origin/front-testing --no-edit
+git merge origin/prod-test --no-edit
 # git merge origin/devops --no-edit
 # git merge origin/billing --no-edit
 # git merge origin/weight --no-edit

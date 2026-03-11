@@ -4,8 +4,8 @@
    Base URL: same origin (relative paths)
    ======================================== */
 
-const API = "http://localhost:8080"; // same origin; change to e.g. 'http://localhost:8080' for dev
-const WEIGHT_API = "http://localhost:8081";
+const API = "http://13.206.3.59:8080"; // same origin; change to e.g. 'http://localhost:8080' for dev
+const WEIGHT_API = "http://13.206.3.59:8081";
 
 // ── NAVIGATION ─────────────────────────────────
 
