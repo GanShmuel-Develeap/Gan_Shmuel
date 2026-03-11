@@ -348,3 +348,100 @@ class TestGetTruck:
         result, err = get_truck("T-001")
         assert result is None
         assert "not found in weight system" in err
+
+# ===========================================================================  
+# get_provider_name
+# ===========================================================================  
+
+class TestGetProviderName:
+    def test_returns_name_if_exists(self, mock_db):
+        cursor, _ = mock_db
+        # Mock fetchone to return a tuple containing the name
+        cursor.fetchone.return_value = ("Acme Corp",)
+        from utils import get_provider_name
+        assert get_provider_name(1) == "Acme Corp"
+
+    def test_returns_false_if_not_exists(self, mock_db):
+        cursor, _ = mock_db
+        cursor.fetchone.return_value = None
+        from utils import get_provider_name
+        assert get_provider_name(999) is False
+
+# ===========================================================================  
+# get_rates_for_provider
+# ===========================================================================  
+
+class TestGetRatesForProvider:
+    def test_correctly_overrides_global_rates(self, mock_db):
+        cursor, _ = mock_db
+        # Mock two rows: one global (scope None) and one specific to provider 1
+        cursor.fetchall.return_value = [
+            {'product_name': 'Apples', 'scope': None, 'rate': 10},
+            {'product_name': 'Apples', 'scope': 1, 'rate': 15},
+            {'product_name': 'Bananas', 'scope': None, 'rate': 5}
+        ]
+        from utils import get_rates_for_provider
+        rates, err = get_rates_for_provider(1)
+        assert err is None
+        assert rates['Apples'] == 15  # Specific override
+        assert rates['Bananas'] == 5 # Global fallback
+
+# ===========================================================================  
+# get_valid_trucks
+# ===========================================================================  
+
+class TestGetValidTrucks:
+    def test_filters_trucks_by_db_presence(self, mock_db):
+        cursor, _ = mock_db
+        # Input weights from API
+        weight_list = [
+            {'truck_id': 'T1'}, {'truck_id': 'T2'}, {'truck_id': 'T3'}
+        ]
+        # Only T1 and T2 exist in DB for this provider
+        cursor.fetchall.return_value = [('T1',), ('T2',)]
+        
+        from utils import get_valid_trucks
+        result = get_valid_trucks(weight_list, 1)
+        
+        assert len(result) == 2
+        assert any(t['truck_id'] == 'T1' for t in result)
+        assert not any(t['truck_id'] == 'T3' for t in result)
+
+# ===========================================================================  
+# get_bill_data (Integration-style Utility Test)
+# ===========================================================================  
+
+class TestGetBillData:
+    @patch("utils.get_provider_name")
+    @patch("utils.api_client.get_weights")
+    @patch("utils.get_rates_for_provider")
+    @patch("utils.get_valid_trucks")
+    def test_calculates_total_correctly(self, mock_valid, mock_rates, mock_weights, mock_name):
+        # Setup Mocks
+        mock_name.return_value = "Test Provider"
+        mock_weights.return_value = ([], None) # weight_data handled by mock_valid
+        mock_rates.return_value = ({"Apples": 10}, None)
+        
+        # Simulate 2 trips of Apples with 100kg each
+        mock_valid.return_value = [
+            {'truck_id': 'T1', 'produce': 'Apples', 'neto': 100},
+            {'truck_id': 'T1', 'produce': 'Apples', 'neto': 100}
+        ]
+
+        from utils import get_bill_data
+        data, err = get_bill_data(1)
+
+        assert err is None
+        assert data['name'] == "Test Provider"
+        assert data['truckCount'] == 1 # Only T1
+        assert data['sessionCount'] == 2
+        assert data['total'] == 2000 # (100+100) * 10
+        assert data['products'][0]['product'] == 'Apples'
+        assert data['products'][0]['pay'] == 2000
+
+    def test_returns_error_if_provider_missing(self, mock_db):
+        with patch("utils.get_provider_name", return_value=False):
+            from utils import get_bill_data
+            data, err = get_bill_data(999)
+            assert data is None
+            assert err == "Provider not found"

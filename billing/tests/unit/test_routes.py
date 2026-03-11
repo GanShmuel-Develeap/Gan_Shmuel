@@ -145,3 +145,37 @@ def test_update_truck_not_found(client):
         rv = client.put("/truck/T99", json={"provider": 2})
         assert rv.status_code == 404
         assert "truck not found" in rv.json["error"].lower()
+
+# ------------------------
+# Bill Routes
+# ------------------------
+
+
+def test_get_bill_success(client):
+    """GET /bill/<id> should return 200 with formatted bill data."""
+    mock_bill = {
+        "id": "1",
+        "name": "Provider Name",
+        "truckCount": 2,
+        "total": 500,
+        "products": []
+    }
+    with patch("routes.get_bill_data", return_value=(mock_bill, None)):
+        rv = client.get("/bill/1")
+        assert rv.status_code == 200
+        assert rv.json["id"] == "1"
+        assert rv.json["total"] == 500
+
+def test_get_bill_provider_not_found(client):
+    """GET /bill/<id> should return 404 if provider doesn't exist."""
+    with patch("routes.get_bill_data", return_value=(None, "Provider not found")):
+        rv = client.get("/bill/999")
+        assert rv.status_code == 404
+        assert "provider not found" in rv.json["error"].lower()
+
+def test_get_bill_db_failure(client):
+    """GET /bill/<id> should return 500 on database connection issues."""
+    with patch("routes.get_bill_data", return_value=(None, "error db connection failed")):
+        rv = client.get("/bill/1")
+        assert rv.status_code == 500
+        assert "db connection failed" in rv.json["error"].lower()
