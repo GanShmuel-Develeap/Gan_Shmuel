@@ -7,20 +7,22 @@ from main import app
 from db import get_conn
 
 
-def test_weight_submit_integration():
+def test_post_weight_integration():
     conn = get_conn()
     cur = conn.cursor()
+
+    truck_id = "ITEST_TRUCK_20"
 
     try:
         client = app.test_client()
 
         resp = client.post(
-            "/weight-form",
-            data={
+            "/weight",
+            json={
                 "direction": "in",
-                "truck": "ITEST_TRUCK_20",
+                "truck": truck_id,
                 "containers": "ITEST_CONT_20",
-                "bruto": "1500",
+                "weight": 1500,
                 "unit": "kg",
                 "produce": "Apples",
             },
@@ -29,20 +31,23 @@ def test_weight_submit_integration():
 
         assert resp.status_code == 201
         assert data["status"] == "success"
-        assert data["truck"] == "ITEST_TRUCK_20"
+        assert data["truck"] == truck_id
         assert data["bruto"] == 1500
         assert "id" in data
 
-        cur.execute("""
+        cur.execute(
+            """
             SELECT direction, truck, containers, bruto, truckTara, neto, produce, unit
             FROM transactions
             WHERE id = %s
-        """, (data["id"],))
+            """,
+            (data["id"],)
+        )
         row = cur.fetchone()
 
         assert row is not None
         assert row[0] == "in"
-        assert row[1] == "ITEST_TRUCK_20"
+        assert row[1] == truck_id
         assert row[2] == "ITEST_CONT_20"
         assert row[3] == 1500
         assert row[4] == 0
@@ -51,7 +56,7 @@ def test_weight_submit_integration():
         assert row[7] == "kg"
 
     finally:
-        cur.execute("DELETE FROM transactions WHERE truck = 'ITEST_TRUCK_20'")
+        cur.execute("DELETE FROM transactions WHERE truck = %s", (truck_id,))
         conn.commit()
         cur.close()
         conn.close()
