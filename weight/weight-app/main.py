@@ -156,33 +156,6 @@ def get_containers():
 
     return jsonify(rows)
 
-@app.route('/weight-form', methods=['GET'])
-def weight_form():
-    """Serve the weight form HTML"""
-    return render_template('weight_form.html')
-
-
-
-@app.route('/weight-form', methods=['POST'])
-def weight_submit():
-    """Handle weight transaction form submission"""
-    # Get form data
-    direction = request.form.get('direction')
-    truck = request.form.get('truck')
-    containers = request.form.get('containers')
-    bruto = request.form.get('bruto')
-    unit = request.form.get('unit', 'kg')
-    produce = request.form.get('produce') or 'na'
-
-    # Call the service function
-    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce, False)
-
-    # Return appropriate response
-    if result['status'] == 'success':
-        return jsonify(result), 201
-    else:
-        return jsonify(result), 400
-
 
 @app.route('/session/<session_id>', methods=['GET'])
 def get_session(session_id):
