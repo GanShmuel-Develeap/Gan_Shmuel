@@ -30,10 +30,10 @@ CREATE TABLE IF NOT EXISTS `Trucks` (
   PRIMARY KEY (`id`),
   FOREIGN KEY (`provider_id`) REFERENCES `Provider`(`id`)
 ) ENGINE=InnoDB ;
-
-
+/*
 INSERT INTO Provider (`name`) VALUES ('pro1'), ('pro2');
 
 INSERT INTO Rates (`product_name`, `rate`, `scope`) VALUES ('apple', 2, NULL), ('orange', 3, NULL), ('orange', 5, 10001);
 
-INSERT INTO Trucks (`id`, `provider_id`) VALUES ('TRUCK-1', 10001),('TRUCK-2', 10002);
+INSERT INTO Trucks (`id`, `provider_id`) VALUES ('134-33-443', 10002);
+*/
