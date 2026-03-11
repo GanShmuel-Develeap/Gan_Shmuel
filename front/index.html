@@ -73,6 +73,10 @@
             <div class="nav-icon">💲</div>
             Rates
           </div>
+          <div class="nav-btn" data-page="bills" onclick="navigate('bills')">
+            <div class="nav-icon">🧾</div>
+            Bills
+          </div>
         </div>
       </nav>
 
@@ -643,6 +647,67 @@
             <div id="transactions-table-wrap">
               <div class="loading">Click Search to load transactions…</div>
             </div>
+          </div>
+        </div>
+
+        <!-- ===== BILLS PAGE ===== -->
+        <div id="page-bills" class="page">
+          <div class="fcard" style="max-width: 700px">
+            <div class="fcard-top">
+              <div class="fcard-icon teal-icon">🧾</div>
+              <div>
+                <div class="fcard-title">Provider Bill</div>
+                <div class="fcard-endpoint">GET /bill/:id</div>
+              </div>
+            </div>
+            <div class="row3">
+              <div class="field">
+                <label>Provider</label>
+                <select id="bill-provider-id">
+                  <option value="">— Select Provider —</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>From (yyyymmddhhmmss)</label>
+                <input type="text" id="bill-from" placeholder="20260301000000" />
+              </div>
+              <div class="field">
+                <label>To (yyyymmddhhmmss)</label>
+                <input type="text" id="bill-to" placeholder="20260311235959" />
+              </div>
+            </div>
+            <div class="btn-row" style="margin-top: 12px">
+              <button class="btn btn-teal" onclick="loadBill()">Generate Bill</button>
+              <button class="btn btn-light" onclick="clearFields(['bill-from','bill-to'],'bill-msg'); document.getElementById('bill-result').style.display='none'">Clear</button>
+            </div>
+            <div class="msg" id="bill-msg"></div>
+          </div>
+
+          <div id="bill-result" class="table-card" style="display:none; margin-top:20px">
+            <div class="table-top">
+              <span class="table-heading" id="bill-result-title">Bill</span>
+            </div>
+            <div class="stats" style="margin-bottom:16px">
+              <div class="stat">
+                <div class="stat-bg" style="background:var(--teal)"></div>
+                <span class="stat-icon">🚛</span>
+                <div class="stat-val" id="bill-truck-count" style="color:var(--teal)">0</div>
+                <div class="stat-lbl">Trucks</div>
+              </div>
+              <div class="stat">
+                <div class="stat-bg" style="background:var(--amber)"></div>
+                <span class="stat-icon">📋</span>
+                <div class="stat-val" id="bill-session-count" style="color:var(--amber)">0</div>
+                <div class="stat-lbl">Sessions</div>
+              </div>
+              <div class="stat">
+                <div class="stat-bg" style="background:var(--violet)"></div>
+                <span class="stat-icon">💰</span>
+                <div class="stat-val" id="bill-total" style="color:var(--violet)">0</div>
+                <div class="stat-lbl">Total Pay</div>
+              </div>
+            </div>
+            <div id="bill-products-wrap"></div>
           </div>
         </div>
 

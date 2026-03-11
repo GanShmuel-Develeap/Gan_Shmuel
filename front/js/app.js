@@ -27,6 +27,7 @@ const pages = {
   },
   trucks: { el: "page-trucks", title: "Trucks", onEnter: null },
   rates: { el: "page-rates", title: "Rates", onEnter: null },
+  bills: { el: "page-bills", title: "Bills", onEnter: loadBillPage },
   // Weight Pages
   "weight-dashboard": {
     el: "page-weight-dashboard",
@@ -146,7 +147,7 @@ async function populateProviderDropdowns() {
     const { ok, data } = await apiFetch("/providers");
     if (!ok || !Array.isArray(data)) return;
     const selects = document.querySelectorAll(
-      "#dash-truck-provider, #create-truck-provider, #update-truck-provider, #update-provider-id",
+      "#dash-truck-provider, #create-truck-provider, #update-truck-provider, #update-provider-id, #bill-provider-id",
     );
     selects.forEach((sel) => {
       const current = sel.value;
@@ -528,6 +529,84 @@ async function lookupTruck() {
   `;
 }
 
+// ── BILLS ──────────────────────────────────────
+
+function loadBillPage() {
+  populateProviderDropdowns();
+}
+
+async function loadBill() {
+  const providerId = document.getElementById("bill-provider-id")?.value?.trim();
+  const from = document.getElementById("bill-from")?.value?.trim();
+  const to = document.getElementById("bill-to")?.value?.trim();
+  const msgId = "bill-msg";
+  const resultEl = document.getElementById("bill-result");
+
+  if (!providerId) {
+    showMsg(msgId, "warn", "Please select a provider.");
+    resultEl.style.display = "none";
+    return;
+  }
+
+  showMsg(msgId, "warn", "Generating bill…");
+
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString() ? `?${params}` : "";
+
+  const { ok, data } = await apiFetch(`/bill/${providerId}${qs}`);
+
+  if (!ok) {
+    showMsg(msgId, "error", `❌ ${data.error || "Failed to generate bill"}`);
+    resultEl.style.display = "none";
+    return;
+  }
+
+  clearMsg(msgId);
+  resultEl.style.display = "block";
+
+  document.getElementById("bill-result-title").textContent =
+    `Bill — ${data.name} (#${data.id})`;
+  document.getElementById("bill-truck-count").textContent = data.truckCount;
+  document.getElementById("bill-session-count").textContent = data.sessionCount;
+  document.getElementById("bill-total").textContent =
+    typeof data.total === "number" ? data.total.toLocaleString() : data.total;
+
+  const products = data.products || [];
+  const wrap = document.getElementById("bill-products-wrap");
+
+  if (products.length === 0) {
+    wrap.innerHTML = '<div class="empty">No product data for this period.</div>';
+    return;
+  }
+
+  wrap.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Count</th>
+          <th>Amount (kg)</th>
+          <th>Rate</th>
+          <th>Pay</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${products.map(p => `
+          <tr>
+            <td><strong>${p.product}</strong></td>
+            <td>${p.count}</td>
+            <td>${p.amount === 'na' ? '<span style="color:var(--coral)">N/A</span>' : p.amount}</td>
+            <td>${p.rate}</td>
+            <td>${p.pay === 'na' ? '<span style="color:var(--coral)">N/A</span>' : p.pay}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
 // ── RATES ──────────────────────────────────────
 
 /**
@@ -673,14 +752,14 @@ async function submitWeight() {
   body.append("direction", document.getElementById("w-direction").value);
   body.append("truck", document.getElementById("w-truck").value);
   body.append("containers", document.getElementById("w-containers").value);
-  body.append("bruto", document.getElementById("w-bruto").value);
+  body.append("weight", document.getElementById("w-bruto").value);
   body.append("unit", document.getElementById("w-unit").value);
   body.append("produce", document.getElementById("w-produce").value);
 
   showMsg(msgId, "warn", "Submitting...");
 
-  // Note: /weight-form expects form-data or x-www-form-urlencoded
-  const res = await fetch(WEIGHT_API + "/weight-form", {
+  // Note: /weight expects form-data or x-www-form-urlencoded
+  const res = await fetch(WEIGHT_API + "/weight", {
     method: "POST",
     body: body,
   });

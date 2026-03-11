@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from flask import Flask, jsonify, render_template, request
+from flask_cors import CORS
 import json
 import csv
 import mysql.connector
@@ -13,6 +14,7 @@ from services.item_service import get_item_data
 from services.weight_service import submit_weight_transaction, get_session_info
 
 app = Flask(__name__)
+CORS(app)
 app.register_blueprint(test_bp)
 print(app.url_map)
 

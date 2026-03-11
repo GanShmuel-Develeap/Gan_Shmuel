@@ -64,6 +64,18 @@ def get_providers():
     return providers
 
 
+def list_trucks():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT t.id, t.provider_id, p.name AS provider_name FROM Trucks t LEFT JOIN Provider p ON t.provider_id = p.id ORDER BY t.id")
+        rows = cursor.fetchall()
+        cursor.close(); conn.close()
+        return rows, None
+    except Exception as e:
+        return None, str(e)
+
+
 def update_provider(provider_id: int, name: str):
     conn = get_connection()
     cursor = conn.cursor()
