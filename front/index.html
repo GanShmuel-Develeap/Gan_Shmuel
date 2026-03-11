@@ -1,0 +1,815 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gan Shmuel — Billing</title>
+    <link rel="stylesheet" href="./css/style.css" />
+    <script src="./js/app.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="logo-area">
+        <div class="logo-icon">🌾</div>
+        <div class="logo-name">Gan Shmuel</div>
+        <div class="mode-switcher">
+          <button
+            id="mode-btn-billing"
+            class="btn-mode active"
+            onclick="switchMode('billing')"
+          >
+            Billing
+          </button>
+          <button
+            id="mode-btn-weight"
+            class="btn-mode"
+            onclick="switchMode('weight')"
+          >
+            Weight
+          </button>
+        </div>
+      </div>
+
+      <nav id="nav-billing">
+        <div class="nav-group">
+          <div class="nav-group-label">Overview</div>
+          <div
+            class="nav-btn active"
+            data-page="dashboard"
+            onclick="navigate('dashboard')"
+          >
+            <div class="nav-icon">📊</div>
+            Dashboard
+          </div>
+          <div
+            class="nav-btn"
+            data-page="transactions"
+            onclick="navigate('transactions')"
+          >
+            <div class="nav-icon">📋</div>
+            Transactions
+          </div>
+        </div>
+        <div class="nav-group">
+          <div class="nav-group-label">Management</div>
+          <div
+            class="nav-btn"
+            data-page="providers"
+            onclick="navigate('providers')"
+          >
+            <div class="nav-icon">🏢</div>
+            Providers
+          </div>
+          <div class="nav-btn" data-page="trucks" onclick="navigate('trucks')">
+            <div class="nav-icon">🚛</div>
+            Trucks
+          </div>
+          <div class="nav-btn" data-page="rates" onclick="navigate('rates')">
+            <div class="nav-icon">💲</div>
+            Rates
+          </div>
+        </div>
+      </nav>
+
+      <nav id="nav-weight" style="display: none">
+        <div class="nav-group">
+          <div class="nav-group-label">Weight Control</div>
+          <div
+            class="nav-btn"
+            data-page="weight-dashboard"
+            onclick="navigate('weight-dashboard')"
+          >
+            <div class="nav-icon">📊</div>
+            Dashboard
+          </div>
+          <div
+            class="nav-btn"
+            data-page="weight-form"
+            onclick="navigate('weight-form')"
+          >
+            <div class="nav-icon">⚖️</div>
+            Weigh
+          </div>
+          <div
+            class="nav-btn"
+            data-page="weight-batch"
+            onclick="navigate('weight-batch')"
+          >
+            <div class="nav-icon">📦</div>
+            Batch
+          </div>
+          <div
+            class="nav-btn"
+            data-page="weight-unknown"
+            onclick="navigate('weight-unknown')"
+          >
+            <div class="nav-icon">❓</div>
+            Unknown
+          </div>
+          <div
+            class="nav-btn"
+            data-page="weight-lookup"
+            onclick="navigate('weight-lookup')"
+          >
+            <div class="nav-icon">🔍</div>
+            Lookup
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="online-badge">
+          <div class="pulse" id="health-pulse"></div>
+          <span id="health-label">Checking…</span>
+        </div>
+        <div class="sidebar-footer-sub">Weight API · Billing DB</div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+      <!-- TOPBAR -->
+      <div class="header">
+        <div class="header-left">
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-date"></p>
+        </div>
+        <div class="header-right">
+          <div class="avatar">GS</div>
+        </div>
+      </div>
+
+      <!-- CONTENT AREA -->
+      <div class="content">
+        <!-- ===== DASHBOARD PAGE ===== -->
+        <div id="page-dashboard" class="page active">
+          <div class="stats" id="stats-row">
+            <div class="stat">
+              <div class="stat-bg" style="background: var(--teal)"></div>
+              <span class="stat-icon">🏢</span>
+              <div
+                class="stat-val"
+                id="stat-providers"
+                style="color: var(--teal)"
+              >
+                —
+              </div>
+              <div class="stat-lbl">Active Providers</div>
+            </div>
+            <div class="stat">
+              <div class="stat-bg" style="background: var(--amber)"></div>
+              <span class="stat-icon">🚛</span>
+              <div
+                class="stat-val"
+                id="stat-trucks"
+                style="color: var(--amber)"
+              >
+                —
+              </div>
+              <div class="stat-lbl">Registered Trucks</div>
+            </div>
+            <div class="stat">
+              <div class="stat-bg" style="background: var(--violet)"></div>
+              <span class="stat-icon">💲</span>
+              <div
+                class="stat-val"
+                id="stat-rates"
+                style="color: var(--violet)"
+              >
+                —
+              </div>
+              <div class="stat-lbl">Rate Entries</div>
+            </div>
+            <div class="stat">
+              <div class="stat-bg" style="background: var(--coral)"></div>
+              <span class="stat-icon">⚙️</span>
+              <div class="stat-val" id="stat-health" style="color: var(--teal)">
+                —
+              </div>
+              <div class="stat-lbl">System Status</div>
+            </div>
+          </div>
+
+          <!-- Quick actions on dashboard -->
+          <div class="forms-grid">
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon teal-icon">🏢</div>
+                <div>
+                  <div class="fcard-title">Quick: New Provider</div>
+                  <div class="fcard-endpoint">POST /provider</div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Provider Name</label>
+                <input
+                  type="text"
+                  id="dash-provider-name"
+                  placeholder="e.g., Tnuva Ltd."
+                />
+              </div>
+              <div class="btn-row">
+                <button
+                  class="btn btn-teal"
+                  onclick="
+                    createProvider('dash-provider-name', 'dash-provider-msg')
+                  "
+                >
+                  Register
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="
+                    clearField('dash-provider-name', 'dash-provider-msg')
+                  "
+                >
+                  Clear
+                </button>
+              </div>
+              <div class="msg" id="dash-provider-msg"></div>
+            </div>
+
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon coral-icon">🚛</div>
+                <div>
+                  <div class="fcard-title">Quick: Register Truck</div>
+                  <div class="fcard-endpoint">POST /truck</div>
+                </div>
+              </div>
+              <div class="row2">
+                <div class="field">
+                  <label>Truck ID</label>
+                  <input type="text" id="dash-truck-id" placeholder="T-14409" />
+                </div>
+                <div class="field">
+                  <label>Provider</label>
+                  <select id="dash-truck-provider">
+                    <option value="">— Select Provider —</option>
+                  </select>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button
+                  class="btn btn-coral"
+                  onclick="
+                    createTruck(
+                      'dash-truck-id',
+                      'dash-truck-provider',
+                      'dash-truck-msg',
+                    )
+                  "
+                >
+                  Register
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="
+                    clearFields(
+                      ['dash-truck-id', 'dash-truck-provider'],
+                      'dash-truck-msg',
+                    )
+                  "
+                >
+                  Clear
+                </button>
+              </div>
+              <div class="msg" id="dash-truck-msg"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== PROVIDERS PAGE ===== -->
+        <div id="page-providers" class="page">
+          <div class="forms-grid">
+            <!-- Create -->
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon teal-icon">➕</div>
+                <div>
+                  <div class="fcard-title">New Provider</div>
+                  <div class="fcard-endpoint">POST /provider</div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Provider Name</label>
+                <input
+                  type="text"
+                  id="create-provider-name"
+                  placeholder="e.g., Tnuva Ltd."
+                />
+              </div>
+              <div class="btn-row">
+                <button
+                  class="btn btn-teal"
+                  onclick="
+                    createProvider(
+                      'create-provider-name',
+                      'create-provider-msg',
+                    )
+                  "
+                >
+                  Register Provider
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="
+                    clearField('create-provider-name', 'create-provider-msg')
+                  "
+                >
+                  Clear
+                </button>
+              </div>
+              <div class="msg" id="create-provider-msg"></div>
+            </div>
+
+            <!-- Update -->
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon amber-icon">✏️</div>
+                <div>
+                  <div class="fcard-title">Update Provider</div>
+                  <div class="fcard-endpoint">PUT /provider/:id</div>
+                </div>
+              </div>
+              <div class="row2">
+                <div class="field">
+                  <label>Provider ID</label>
+                  <select id="update-provider-id">
+                    <option value="">— Select Provider —</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>New Name</label>
+                  <input
+                    type="text"
+                    id="update-provider-name"
+                    placeholder="New name"
+                  />
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-amber" onclick="updateProvider()">
+                  Update Provider
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="
+                    clearFields(
+                      ['update-provider-id', 'update-provider-name'],
+                      'update-provider-msg',
+                    )
+                  "
+                >
+                  Clear
+                </button>
+              </div>
+              <div class="msg" id="update-provider-msg"></div>
+            </div>
+          </div>
+
+          <!-- Providers list -->
+          <div class="table-card">
+            <div class="table-top">
+              <span class="table-heading">All Providers</span>
+              <button class="btn btn-light sm" onclick="loadProviders()">
+                ↻ Refresh
+              </button>
+            </div>
+            <div id="providers-table-wrap">
+              <div class="loading">Loading providers…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== TRUCKS PAGE ===== -->
+        <div id="page-trucks" class="page">
+          <div class="forms-grid">
+            <!-- Create -->
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon coral-icon">➕</div>
+                <div>
+                  <div class="fcard-title">Register Truck</div>
+                  <div class="fcard-endpoint">POST /truck</div>
+                </div>
+              </div>
+              <div class="row2">
+                <div class="field">
+                  <label>Truck ID</label>
+                  <input
+                    type="text"
+                    id="create-truck-id"
+                    placeholder="T-14409"
+                  />
+                </div>
+                <div class="field">
+                  <label>Provider</label>
+                  <select id="create-truck-provider">
+                    <option value="">— Select Provider —</option>
+                  </select>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button
+                  class="btn btn-coral"
+                  onclick="
+                    createTruck(
+                      'create-truck-id',
+                      'create-truck-provider',
+                      'create-truck-msg',
+                    )
+                  "
+                >
+                  Register Truck
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="
+                    clearFields(
+                      ['create-truck-id', 'create-truck-provider'],
+                      'create-truck-msg',
+                    )
+                  "
+                >
+                  Clear
+                </button>
+              </div>
+              <div class="msg" id="create-truck-msg"></div>
+            </div>
+
+            <!-- Update -->
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon amber-icon">✏️</div>
+                <div>
+                  <div class="fcard-title">Update Truck Provider</div>
+                  <div class="fcard-endpoint">PUT /truck/:id</div>
+                </div>
+              </div>
+              <div class="row2">
+                <div class="field">
+                  <label>Truck</label>
+                  <select id="update-truck-id">
+                    <option value="">— Select Truck —</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>New Provider</label>
+                  <select id="update-truck-provider">
+                    <option value="">— Select Provider —</option>
+                  </select>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-amber" onclick="updateTruck()">
+                  Update Truck
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="
+                    clearFields(
+                      ['update-truck-id', 'update-truck-provider'],
+                      'update-truck-msg',
+                    )
+                  "
+                >
+                  Clear
+                </button>
+              </div>
+              <div class="msg" id="update-truck-msg"></div>
+            </div>
+
+            <!-- Lookup -->
+            <div class="fcard" style="grid-column: 1/-1">
+              <div class="fcard-top">
+                <div class="fcard-icon violet-icon">🔍</div>
+                <div>
+                  <div class="fcard-title">Truck Billing Lookup</div>
+                  <div class="fcard-endpoint">GET /truck/:id</div>
+                </div>
+              </div>
+              <div class="row3">
+                <div class="field">
+                  <label>Truck</label>
+                  <select id="lookup-truck-id">
+                    <option value="">— Select Truck —</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>From (yyyymmddhhmmss)</label>
+                  <input
+                    type="text"
+                    id="lookup-truck-from"
+                    placeholder="20260301000000"
+                  />
+                </div>
+                <div class="field">
+                  <label>To (yyyymmddhhmmss)</label>
+                  <input
+                    type="text"
+                    id="lookup-truck-to"
+                    placeholder="20260310235959"
+                  />
+                </div>
+              </div>
+              <div class="btn-row" style="margin-top: 4px">
+                <button class="btn btn-violet" onclick="lookupTruck()">
+                  Search Truck →
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="
+                    clearFields(
+                      [
+                        'lookup-truck-id',
+                        'lookup-truck-from',
+                        'lookup-truck-to',
+                      ],
+                      'lookup-truck-result',
+                    )
+                  "
+                >
+                  Clear
+                </button>
+              </div>
+              <div
+                id="lookup-truck-result"
+                class="result-box"
+                style="display: none"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== RATES PAGE ===== -->
+        <div id="page-rates" class="page">
+          <div class="forms-grid">
+            <!-- Upload -->
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon amber-icon">📊</div>
+                <div>
+                  <div class="fcard-title">Upload Rates File</div>
+                  <div class="fcard-endpoint">POST /rates</div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Excel Filename (from /in folder)</label>
+                <input
+                  type="text"
+                  id="rates-filename"
+                  placeholder="rates.xlsx"
+                />
+              </div>
+              <div class="hint">
+                File must exist in the server's <code>/in</code> folder.
+                Columns: Product, Rate, Scope.
+              </div>
+              <div class="btn-row" style="margin-top: 12px">
+                <button class="btn btn-amber" onclick="uploadRates()">
+                  ↑ Upload Rates
+                </button>
+                <button
+                  class="btn btn-light"
+                  onclick="clearField('rates-filename', 'rates-upload-msg')"
+                >
+                  Clear
+                </button>
+              </div>
+              <div class="msg" id="rates-upload-msg"></div>
+            </div>
+
+            <!-- Download -->
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon teal-icon">⬇️</div>
+                <div>
+                  <div class="fcard-title">Download Current Rates</div>
+                  <div class="fcard-endpoint">GET /rates</div>
+                </div>
+              </div>
+              <p
+                style="
+                  font-size: 13px;
+                  color: var(--muted-text);
+                  margin-bottom: 20px;
+                  line-height: 1.6;
+                "
+              >
+                Downloads the most recently uploaded rates Excel file from the
+                server.
+              </p>
+              <button class="btn btn-teal" onclick="downloadRates()">
+                ⬇ Download rates.xlsx
+              </button>
+              <div class="msg" id="rates-download-msg"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== TRANSACTIONS PAGE ===== -->
+        <div id="page-transactions" class="page">
+          <div class="table-card">
+            <div class="table-top">
+              <span class="table-heading">Weight Transactions</span>
+              <div style="display: flex; gap: 10px; align-items: center">
+                <input
+                  type="text"
+                  id="tx-filter"
+                  placeholder="Filter: in,out,none"
+                  style="width: 160px; margin: 0"
+                />
+                <button class="btn btn-teal sm" onclick="loadTransactions()">
+                  Search
+                </button>
+              </div>
+            </div>
+            <div class="filter-bar">
+              <div class="field-inline">
+                <label>From</label>
+                <input type="text" id="tx-from" placeholder="yyyymmddhhmmss" />
+              </div>
+              <div class="field-inline">
+                <label>To</label>
+                <input type="text" id="tx-to" placeholder="yyyymmddhhmmss" />
+              </div>
+            </div>
+            <div id="transactions-table-wrap">
+              <div class="loading">Click Search to load transactions…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== WEIGHT DASHBOARD ===== -->
+        <div id="page-weight-dashboard" class="page">
+          <div class="stats">
+            <div class="stat">
+              <div class="stat-bg" style="background: var(--teal)"></div>
+              <span class="stat-icon">⚖️</span>
+              <div class="stat-val" id="stat-weight-health">Online</div>
+              <div class="stat-lbl">Weight Service</div>
+            </div>
+          </div>
+          <div class="forms-grid">
+            <div class="fcard">
+              <div class="fcard-top">
+                <div class="fcard-icon teal-icon">⚖️</div>
+                <div>
+                  <div class="fcard-title">New Weighing</div>
+                  <div class="fcard-endpoint">Go to Weigh Form</div>
+                </div>
+              </div>
+              <p
+                style="
+                  color: var(--muted-text);
+                  font-size: 13px;
+                  margin-bottom: 15px;
+                "
+              >
+                Register new IN/OUT transactions manually.
+              </p>
+              <button class="btn btn-teal" onclick="navigate('weight-form')">
+                Open Weigh Form
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== WEIGHT FORM PAGE ===== -->
+        <div id="page-weight-form" class="page">
+          <div class="fcard" style="max-width: 600px">
+            <div class="fcard-top">
+              <div class="fcard-icon teal-icon">⚖️</div>
+              <div>
+                <div class="fcard-title">Weighing Form</div>
+                <div class="fcard-endpoint">POST /weight-form</div>
+              </div>
+            </div>
+            <div class="row2">
+              <div class="field">
+                <label>Direction</label>
+                <select id="w-direction">
+                  <option value="in">IN</option>
+                  <option value="out">OUT</option>
+                  <option value="none">NONE</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Truck License</label>
+                <input type="text" id="w-truck" placeholder="e.g. T-12345" />
+              </div>
+            </div>
+            <div class="field">
+              <label>Containers (comma separated)</label>
+              <input type="text" id="w-containers" placeholder="C-101, C-102" />
+            </div>
+            <div class="row3">
+              <div class="field">
+                <label>Weight</label>
+                <input type="number" id="w-bruto" placeholder="0" />
+              </div>
+              <div class="field">
+                <label>Unit</label>
+                <select id="w-unit">
+                  <option value="kg">kg</option>
+                  <option value="lbs">lbs</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Produce</label>
+                <input type="text" id="w-produce" placeholder="e.g. Oranges" />
+              </div>
+            </div>
+            <div class="btn-row" style="margin-top: 15px">
+              <button class="btn btn-teal" onclick="submitWeight()">
+                Submit Transaction
+              </button>
+              <button
+                class="btn btn-light"
+                onclick="
+                  clearFields(
+                    ['w-truck', 'w-containers', 'w-bruto', 'w-produce'],
+                    'w-msg',
+                  )
+                "
+              >
+                Clear
+              </button>
+            </div>
+            <div class="msg" id="w-msg"></div>
+          </div>
+        </div>
+
+        <!-- ===== WEIGHT BATCH PAGE ===== -->
+        <div id="page-weight-batch" class="page">
+          <div class="fcard">
+            <div class="fcard-top">
+              <div class="fcard-icon amber-icon">📦</div>
+              <div>
+                <div class="fcard-title">Batch Container Upload</div>
+                <div class="fcard-endpoint">POST /batch-weight</div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Filename (JSON/CSV in /in folder)</label>
+              <input
+                type="text"
+                id="w-batch-file"
+                placeholder="containers.json"
+              />
+            </div>
+            <button class="btn btn-amber" onclick="uploadBatchWeight()">
+              Upload Batch
+            </button>
+            <div class="msg" id="w-batch-msg"></div>
+          </div>
+        </div>
+
+        <!-- ===== WEIGHT UNKNOWN PAGE ===== -->
+        <div id="page-weight-unknown" class="page">
+          <div class="table-card">
+            <div class="table-top">
+              <span class="table-heading">Unknown Containers</span>
+              <button class="btn btn-light sm" onclick="loadUnknown()">
+                ↻ Refresh
+              </button>
+            </div>
+            <div id="unknown-table-wrap">
+              <div class="loading">Loading...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== WEIGHT LOOKUP PAGE ===== -->
+        <div id="page-weight-lookup" class="page">
+          <div class="fcard">
+            <div class="fcard-top">
+              <div class="fcard-icon violet-icon">🔍</div>
+              <div class="fcard-title">Session / Item Lookup</div>
+            </div>
+            <div class="field">
+              <label>ID (Session ID or Item ID)</label>
+              <input type="text" id="w-lookup-id" placeholder="ID..." />
+            </div>
+            <button class="btn btn-violet" onclick="lookupWeightData()">
+              Search
+            </button>
+            <div
+              id="w-lookup-result"
+              class="result-box"
+              style="display: none; margin-top: 15px"
+            ></div>
+          </div>
+        </div>
+      </div>
+      <!-- end .content -->
+    </div>
+    <!-- end .main -->
+  </body>
+</html>
