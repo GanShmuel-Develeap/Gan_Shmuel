@@ -94,9 +94,10 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
 
             if direction in ['in', 'none']:
                 session_id = f"{truck}_{timestamp_str}"
+
             elif direction == 'out':
                 query = """
-                SELECT session_id, bruto, produce
+                SELECT session_id, bruto, produce, containers
                 FROM transactions
                 WHERE truck = %s AND direction = 'in'
                 ORDER BY datetime DESC
@@ -113,6 +114,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                         'status': 'error',
                         'message': 'No prior IN transaction found for this truck'
                     }
+
             else:
                 cur.close()
                 conn.close()
@@ -138,6 +140,8 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                         conn.commit()
 
                 in_bruto = int(prior_in['bruto'])
+                in_produce = prior_in['produce']
+                in_containers = prior_in['containers']
 
                 # 4. OUT weight cannot be bigger than matching IN weight
                 if bruto > in_bruto:
@@ -148,7 +152,30 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                         'message': 'OUT weight cannot be greater than the matching IN weight'
                     }
 
+                # produce validation
+                if produce and produce != 'na' and produce != in_produce:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'status': 'error',
+                        'message': 'Produce must match the original IN transaction'
+                    }
+                if not produce or produce == 'na':
+                    produce = in_produce
+
+                # containers validation
+                if containers and containers != in_containers:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'status': 'error',
+                        'message': 'Containers must match the original IN transaction'
+                    }
+                if not containers:
+                    containers = in_containers
+
             cur.close()
+
         except Error as e:
             if conn.is_connected():
                 conn.close()
@@ -163,7 +190,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
             bruto_db = int(prior_in['bruto'])
 
             # 6. OUT produce copied from matching IN
-            produce_db = prior_in['produce'] or 'na'
+            produce_db = produce
             neto_db = 0
         else:
             truckTara = 0
@@ -260,14 +287,6 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
         }
 
 
-# def get_container_tara(container_id):
-#     """
-#     Look up container tara weight from containers_registered table.
-#     Returns the weight or None if not found.
-#     """
-#     conn = get_conn()
-
-
 def get_container_tara(container_id):
     """
     Look up container tara weight from containers_registered table.
@@ -297,12 +316,6 @@ def get_session_info(session_id):
     Returns session data with all transactions.
     For sessions with both IN and OUT, neto is calculated as:
     neto = IN.bruto - OUT.truckTara - sum(container_taras)
-    
-    Args:
-        session_id (str): Session ID (truck_YYYYMMDD or na_timestamp)
-    
-    Returns:
-        dict: {'status': 'success'|'error', 'data': session_data or None}
     """
     conn = get_conn()
     if not conn:
@@ -310,11 +323,10 @@ def get_session_info(session_id):
             'status': 'error',
             'message': 'Database connection failed'
         }
-    
+
     try:
         cur = conn.cursor(dictionary=True)
-        
-        # Get all transactions for this session
+
         query = """
             SELECT id, datetime, direction, truck, containers, bruto, truckTara, neto,
                    produce, unit, session_id
@@ -324,22 +336,18 @@ def get_session_info(session_id):
         """
         cur.execute(query, (session_id,))
         transactions = cur.fetchall()
-        
+
         if not transactions:
             return {
                 'status': 'error',
                 'message': 'Session not found'
             }
-        
-        # Find IN and OUT transactions
+
         in_tx = next((tx for tx in transactions if tx['direction'] == 'in'), None)
         out_tx = next((tx for tx in transactions if tx['direction'] == 'out'), None)
-        
-        # Calculate neto only if both IN and OUT exist
+
         calculated_neto = 'na'
         if in_tx and out_tx:
-            # neto = IN.bruto - OUT.truckTara - sum(container_taras)
-            # IN.bruto is the total weight in, OUT.truckTara is the total weight out
             container_taras = 0
             can_calculate = True
             if in_tx['containers']:
@@ -349,38 +357,33 @@ def get_session_info(session_id):
                     if tara is not None:
                         container_taras += tara
                     else:
-                        # Can't calculate if any container tara is unknown
                         can_calculate = False
                         break
-            
+
             if can_calculate:
                 try:
                     calculated_neto = int(in_tx['bruto'] - out_tx['truckTara'] - container_taras)
                 except:
                     calculated_neto = 'na'
-        
-        # Build session response
+
         session_data = {
             'session_id': session_id,
             'truck': transactions[0]['truck'],
             'transactions': []
         }
-        
-        # Add each transaction in the response (IN and OUT all return neto='na' individually)
+
         for tx in transactions:
             tx_data = {
                 'id': str(tx['id']),
                 'truck': tx['truck'],
                 'bruto': tx['bruto'],
-                'neto': 'na',  # Individual transactions always show neto as 'na'
+                'neto': 'na',
                 'unit': tx['unit'],
                 'direction': tx['direction'],
                 'datetime': tx['datetime'].isoformat() if tx['datetime'] else None
             }
-            
             session_data['transactions'].append(tx_data)
-        
-        # Add calculated neto at session level if both IN and OUT exist
+
         if in_tx and out_tx:
             session_data['neto'] = calculated_neto
             session_data['session_summary'] = {
@@ -388,12 +391,12 @@ def get_session_info(session_id):
                 'out_weight': out_tx['truckTara'],
                 'calculated_neto': calculated_neto
             }
-        
+
         return {
             'status': 'success',
             'data': session_data
         }
-        
+
     except Error as e:
         print(f"Error querying session: {e}")
         return {
@@ -403,3 +406,4 @@ def get_session_info(session_id):
     finally:
         if conn.is_connected():
             conn.close()
+
