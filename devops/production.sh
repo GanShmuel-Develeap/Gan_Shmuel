@@ -11,7 +11,7 @@ git merge origin/front-testing --no-edit
 # git merge origin/billing --no-edit
 # git merge origin/weight --no-edit
 
-docker network prune --all -f
+docker network prune -f
 
 
 docker network create gan_shmuel_shared_prod
