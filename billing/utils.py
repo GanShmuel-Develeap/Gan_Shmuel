@@ -54,6 +54,15 @@ def create_provider(name: str):
     cursor.close(); conn.close()
     return provider_id, None
 
+def get_providers():
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)  # dict במקום tuple
+    cursor.execute("SELECT id, name FROM Provider")
+    providers = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return providers
+
 
 def update_provider(provider_id: int, name: str):
     conn = get_connection()
