@@ -9,6 +9,8 @@ git merge origin/devops --no-edit
 git merge origin/billing --no-edit
 git merge origin/weight --no-edit
 
+docker network create gan_shmuel_shared_prod
+
 # 3. Launch the environment in the background
 # The -p flag ensures it's isolated from your testing branch
 docker compose -p gan-shmuel-production -f compose.production.yaml up -d --build
