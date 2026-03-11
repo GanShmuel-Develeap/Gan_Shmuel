@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request,send_file
 from utils import create_provider, update_provider, upload_rates, get_rates_file_path,health_check
 from utils import get_truck, create_truck, update_truck, get_providers
+from utils import get_bill_data
+
 import mysql.connector
 bill_bp = Blueprint('bill', __name__)
 
@@ -131,3 +133,15 @@ def get_truck_route(truck_id):
 
     return jsonify(truck_data), 200
 
+
+# ------------------ Get Bill ------------------
+@bill_bp.route("/bill/<string:id>", methods=["GET"])
+def get_bill(id):
+    data,err  = get_bill_data(id)
+    if err == "Provider not found" or err == "Error accessing weight server":
+        return jsonify({"error": err}), 404
+    elif err == "error db connection failed":
+        return jsonify({"error": err}), 500
+    elif err:
+        return jsonify({"error": err}), 500
+    return jsonify(data), 200

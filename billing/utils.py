@@ -26,7 +26,7 @@ def health_check():
     except:
        return False
 
-def get_weight_connection():
+def get_weight_connection():#remove?
     return mysql.connector.connect(
         host=os.getenv("WEIGHT_DB_HOST", os.getenv("DB_HOST")),
         user=os.getenv("WEIGHT_DB_USER", os.getenv("DB_USER")),
@@ -289,5 +289,242 @@ def get_truck(truck_id: str, from_dt=None, to_dt=None):
         "tara": data.get("tara"),
         "sessions": data.get("sessions", [])
     }, None
+
+
+# ---- Bill ---- 
+
+
+
+
+def get_provider_name(id):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT name FROM Provider WHERE id = %s", (id,))
+    name = cursor.fetchone()
+    if name:
+        cursor.close()
+        conn.close()
+        return name[0]
+    cursor.close()
+    conn.close()
+    return False
+
+def get_valid_trucks(weight_list, provider_id):
+    #Extract all unique truck IDs from your dictionary list
+
+    #for every item in weight_list if truck['truck_id'] is not already in the set enter it this ensures unique truck ids
+    input_ids = list(set(item['truck_id'] for item in weight_list))
+    
+    if not input_ids:
+        return []
+
+    valid_ids_from_db = set()
+    
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        #Build the dynamic 'IN' clause placeholders (%s, %s, %s...)
+        placeholders = ', '.join(['%s'] * len(input_ids))
+        query = f"""
+            SELECT id 
+            FROM Trucks 
+            WHERE provider_id = %s AND id IN ({placeholders})
+        """
+        
+        #Execute in 1 trip
+        #Pass provider_id first, then the list of IDs
+        cursor.execute(query, [provider_id] + input_ids)
+        
+        # Store results in a set for lightning-fast cross-referencing
+
+        # for every row in cursor.fetchall() get the first item row[0] 'id' 
+        valid_ids_from_db = {row[0] for row in cursor.fetchall()}
+        
+    except mysql.connector.Error as err:
+        print(f"Database Error: {err}")
+    finally:
+        if 'conn' in locals() and conn.is_connected():
+            cursor.close()
+            conn.close()
+
+    #cross-reference: Filter the original list
+
+    # We only keep the dictionary if its 'id' exists in our 'valid_ids_from_db' set
+
+    #for every truck in weight_list if truck['id'] is in valid_ids_from_db enter it to the list valid_trucks
+    valid_trucks = [
+        truck for truck in weight_list 
+        if truck['truck_id'] in valid_ids_from_db
+    ]
+    
+    return valid_trucks
+
+def get_unique_trucks(valid_trucks):
+    
+    #Extract IDs and convert to a set to remove duplicates
+
+    # get every unique truck in valid_trucks and enter it to dict
+    unique_trucks = {truck['truck_id'] for truck in valid_trucks}
+    
+    #Convert back to a list
+    unique_trucks = list(unique_trucks)
+    
+    #Return the unique_trucks
+    return unique_trucks
+
+def get_rates_for_provider(id):
+    conn = get_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+
+        query = """
+            SELECT * 
+            FROM Rates
+        """
+
+        cursor.execute(query)
+
+        rates = {}
+
+        for row in cursor.fetchall():
+            product = row['product_name']
+            scope = row['scope']
+            rate = row['rate']
+
+            if scope is None:
+                if product not in rates: # Only set default if not already set by an ID
+                    rates[product] = rate
+            elif scope == id:
+                rates[product] = rate # Override whatever is there
+
+    except Exception:
+        return None ,'error db connection failed'
+
+    finally:
+        cursor.close(); conn.close()
+
+    # Return number of inserted rows
+    return rates, None
+
+def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
+
+    id = truck_id
+
+    name = get_provider_name(id)
+    if not name:
+        return None, "Provider not found"
+
+    now = datetime.now()
+    from_time = _parse_dt(from_dt) if from_dt else now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    to_time = _parse_dt(to_dt) if to_dt else now
+
+    params = {
+        "from": from_time.strftime("%Y%m%d%H%M%S"),
+        "to": to_time.strftime("%Y%m%d%H%M%S"),
+        "filter":"out"
+    }
+
+    weight_data, err = api_client.get_weights(params=params)
+    if err:
+        return None, "Error accessing weight server"
+
+    valid_trucks = get_valid_trucks(weight_data,id)
+
+    unique_trucks = get_unique_trucks(valid_trucks)
+
+    #Get the count
+    truckCount = len(unique_trucks)
+    sessionCount = 0
+    total = 0
+
+    sessionCount = len(valid_trucks)
+
+    unique_products = {}
+    product_index = 0
+    products = []
+
+    #get rates for all produce in a dict
+    rates,err = get_rates_for_provider(id)
+    if err:
+        return None,err
+
+
+    for truck in valid_trucks:
+        if truck['neto'] == 'na':
+            #add new addition to products with untracked neto
+            if truck['produce'] + '_untracked_neto' not in unique_products:
+                unique_products[truck['produce'] + '_untracked_neto'] = product_index
+                product_index += 1
+                
+                rate = rates.get(truck['produce'], 0)
+                pay = 'na'
+                products.append({
+                    'product': truck['produce']+'_untracked_neto',
+                    'count': 1,#first trip
+                    'amount': 'na',
+                    'rate': rate,
+                    'pay': pay
+                    })
+            else:
+                temp_index = unique_products[truck['produce'] + '_untracked_neto']
+
+                products[temp_index]['count'] += 1
+
+        #add new addition to products with tracked neto
+        elif truck['produce'] not in unique_products:
+            unique_products[truck['produce']] = product_index
+            product_index += 1
+            
+            rate = rates.get(truck['produce'], 0)
+            pay = rate * truck['neto'] 
+            total += pay
+            products.append({
+                'product': truck['produce'],
+                'count': 1,#first trip
+                'amount': truck['neto'],
+                'rate': rate,
+                'pay': pay
+                })
+        #add data to products[temp_index]
+        else:
+            temp_index = unique_products[truck['produce']]
+
+            pay = rates.get(truck['produce'], 0) * truck['neto']
+            total += pay
+            products[temp_index]['count'] += 1
+            products[temp_index]['amount'] += truck['neto']
+            products[temp_index]['pay'] += pay
+            
+
+    return {
+        #provider_id from get_bill_data id paramater
+        "id": id,
+
+        #provider_name from get_provider_name return value
+        "name": name,
+
+        #time stamp "from" from get_bill_data t1 paramater
+        "from": params['from'],
+
+        #time stamp "to" from get_bill_data t2 paramater
+        "to": params['to'],
+
+        #unique truck count from get_bill_data inner calculation 
+        "truckCount": truckCount,
+
+        #session count for this provider from get_bill_data inner calculation
+        "sessionCount": sessionCount,
+
+        #unique product list from get_bill_data inner calculation 
+        "products": products,
+
+        #total pay from get_bill_data inner calculation 
+        "total": total
+    },None
+
+
 
 
