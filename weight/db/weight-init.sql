@@ -19,3 +19,15 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `session_id` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=10001 ;
+
+-- audit log for every action on transactions
+CREATE TABLE IF NOT EXISTS `transaction_events` (
+  `event_id` int(12) NOT NULL AUTO_INCREMENT,
+  `timestamp` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `transaction_id` int(12) DEFAULT NULL,
+  `action` varchar(20) NOT NULL,
+  `details` varchar(1000) DEFAULT NULL,
+  `performed_by` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`event_id`),
+  INDEX (`transaction_id`)
+) ENGINE=MyISAM AUTO_INCREMENT=10001 ;

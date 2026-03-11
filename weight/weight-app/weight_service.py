@@ -3,6 +3,24 @@ from datetime import datetime
 import mysql.connector
 from mysql.connector import Error
 
+# utility for audit logging
+
+def log_event(conn, transaction_id, action, details=None, performed_by=None):
+    """Insert a row into transaction_events using existing connection."""
+    try:
+        cur = conn.cursor()
+        query = """
+            INSERT INTO transaction_events
+            (transaction_id, action, details, performed_by)
+            VALUES (%s, %s, %s, %s)
+        """
+        cur.execute(query, (transaction_id, action, details, performed_by))
+        conn.commit()
+        cur.close()
+    except Exception:
+        # best-effort logging; don't interrupt main workflow
+        pass
+
 def submit_weight_transaction(direction, truck, containers, bruto, unit, produce, force=False):
     """
     Submit a weight transaction to the database.
@@ -89,6 +107,8 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                         delete_query = "DELETE FROM transactions WHERE session_id = %s"
                         cur.execute(delete_query, (row['session_id'],))
                         conn.commit()
+                        # audit log
+                        log_event(conn, None, 'delete_session', f"overwritten session {row['session_id']}")
             
             if direction in ['in', 'none']:
                 session_id = f"{truck}_{timestamp_str}"
@@ -138,6 +158,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                         delete_query = "DELETE FROM transactions WHERE session_id = %s AND direction = 'out'"
                         cur.execute(delete_query, (session_id,))
                         conn.commit()
+                        log_event(conn, None, 'delete_out', f"session {session_id} overwritten by force")
             
             cur.close()
         except Error as e:
@@ -188,6 +209,8 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
             cur.execute(query, values)
             conn.commit()
             transaction_id = cur.lastrowid
+            # audit insert
+            log_event(conn, transaction_id, 'insert', f"direction={direction}")
             cur.close()
 
             if direction == 'out':
@@ -216,6 +239,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                         'bruto': summary.get('in_weight', 0),
                         'truckTara': summary.get('out_weight', bruto),
                         'neto': neto_val,
+                        'session_id': session_id
                     }
                 else:
                     # Fallback if session lookup fails
@@ -225,6 +249,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                         'bruto': 0,
                         'truckTara': bruto,
                         'neto': 'na',
+                        'session_id': session_id
                     }
             else:
                 # IN and NONE
@@ -232,6 +257,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                     'id': str(transaction_id),
                     'truck': truck,
                     'bruto': bruto,
+                    'session_id': session_id
                 }
 
             return {

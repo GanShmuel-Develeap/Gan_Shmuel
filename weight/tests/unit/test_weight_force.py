@@ -41,8 +41,9 @@ class TestWeightForceLogic(unittest.TestCase):
         mock_cursor.close.assert_called()
         mock_conn.close.assert_called()
 
+    @patch('weight_service.log_event')
     @patch('weight_service.get_conn')
-    def test_force_true_overwrites_open_session(self, mock_get_conn):
+    def test_force_true_overwrites_open_session(self, mock_get_conn, mock_log):
         """Test force=true overwrites existing open IN/NONE session."""
         # Setup mock connection and cursor
         mock_conn = MagicMock()
@@ -73,6 +74,10 @@ class TestWeightForceLogic(unittest.TestCase):
         delete_calls = [c for c in mock_cursor.execute.call_args_list 
                        if 'DELETE' in str(c)]
         self.assertGreater(len(delete_calls), 0)
+        # audit log should have been invoked once
+        mock_log.assert_called_once()
+        args = mock_log.call_args[0]
+        self.assertIn('delete_session', args)
 
     @patch('weight_service.get_conn')
     def test_force_false_with_existing_out_transaction(self, mock_get_conn):
@@ -109,8 +114,9 @@ class TestWeightForceLogic(unittest.TestCase):
         mock_cursor.close.assert_called()
         mock_conn.close.assert_called()
 
+    @patch('weight_service.log_event')
     @patch('weight_service.get_conn')
-    def test_force_true_overwrites_out_transaction(self, mock_get_conn):
+    def test_force_true_overwrites_out_transaction(self, mock_get_conn, mock_log):
         """Test force=true overwrites existing OUT transaction."""
         # Setup mock connection and cursor
         mock_conn = MagicMock()
@@ -142,6 +148,8 @@ class TestWeightForceLogic(unittest.TestCase):
         delete_calls = [c for c in mock_cursor.execute.call_args_list 
                        if 'DELETE' in str(c)]
         self.assertGreater(len(delete_calls), 0)
+        mock_log.assert_called_once()
+        self.assertIn('delete_out', mock_log.call_args[0])
 
     @patch('weight_service.get_conn')
     def test_no_force_logic_for_na_truck_in_direction(self, mock_get_conn):

@@ -192,6 +192,54 @@ def get_session(session_id):
         return jsonify(result), 404
 
 
+@app.route('/sessions/abandoned', methods=['GET'])
+def get_abandoned_sessions():
+    """List session IDs that have an IN/NONE with no OUT and older than timeout."""
+    # timeout in seconds (default 24h)
+    try:
+        timeout = int(request.args.get('timeout', 86400))
+    except ValueError:
+        timeout = 86400
+
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+    query = f"""
+        SELECT session_id, MIN(datetime) AS first_in, truck
+        FROM transactions
+        WHERE direction IN ('in','none')
+        GROUP BY session_id
+        HAVING session_id NOT IN (SELECT session_id FROM transactions WHERE direction = 'out')
+          AND first_in < NOW() - INTERVAL %s SECOND
+    """
+    cur.execute(query, (timeout,))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
+
+
+@app.route('/sessions/<session_id>/audit', methods=['GET'])
+def get_session_audit(session_id):
+    """Return audit log entries for a given session (by session_id)."""
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+    # join on transaction_id to filter by any tx in session
+    query = """
+        SELECT e.*
+        FROM transaction_events e
+        LEFT JOIN transactions t ON e.transaction_id = t.id
+        WHERE t.session_id = %s OR e.details LIKE %s
+        ORDER BY e.timestamp ASC
+    """
+    # include events where details mention the session (e.g. deletions)
+    cur.execute(query, (session_id, f"%{session_id}%"))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify(rows)
+
+
 @app.route('/unknown', methods=['GET'])
 def get_unknown():
     conn = get_conn()
