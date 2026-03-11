@@ -19,42 +19,46 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
         dict: {'status': 'success'|'error', 'message': str, 'id': str or None, ...}
     """
     try:
-        # Validate inputs
-        if not all([direction, bruto]):
+        if not direction or bruto is None:
             return {
                 'status': 'error',
                 'message': 'Missing required fields: direction, bruto'
             }
 
-        # For IN and NONE, containers are required
+        # 2. no change needed here; current IN behavior already covers this
         if direction in ['in', 'none'] and not containers:
             return {
                 'status': 'error',
                 'message': 'Containers are required for IN and NONE directions'
             }
 
-        # Default truck to 'na' if empty
-        truck = truck or 'na'
+        # 1. truck required for IN / OUT
+        if direction in ['in', 'out'] and not (truck and str(truck).strip()):
+            return {
+                'status': 'error',
+                'message': 'Truck is required for IN and OUT directions'
+            }
 
-        # Default containers to empty string if not provided
         containers = containers or ''
 
-        # Convert inputs to integers
         try:
             bruto = int(bruto)
-        except ValueError:
+        except (ValueError, TypeError):
             return {
                 'status': 'error',
                 'message': 'Bruto must be a number'
             }
 
-        # Default produce to 'na' if empty
-        produce = produce or 'na'
+        # 3. weight must be > 0
+        if bruto <= 0:
+            return {
+                'status': 'error',
+                'message': 'Weight must be greater than 0'
+            }
 
-        # Calculate session_id according to timestamp
+        produce = produce or 'na'
         timestamp_str = datetime.now().strftime('%Y%m%d%H%M%S')
-        
-        # Connect to DB to handle direction logic
+
         conn = get_conn()
         if not conn:
             return {
@@ -64,10 +68,9 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
 
         try:
             cur = conn.cursor(dictionary=True)
-            
-            # Handle force logic for overwriting existing sessions/transactions
-            if direction in ['in', 'none'] and truck != 'na':
-                # Check for open session (in or none without out)
+            prior_in = None
+
+            if direction in ['in', 'none'] and truck and truck != 'na':
                 query = """
                 SELECT session_id FROM transactions 
                 WHERE truck = %s AND direction IN ('in', 'none') 
@@ -85,33 +88,30 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                             'message': 'Truck has an open session. Use force=true to overwrite.'
                         }
                     else:
-                        # Delete the open session
                         delete_query = "DELETE FROM transactions WHERE session_id = %s"
                         cur.execute(delete_query, (row['session_id'],))
                         conn.commit()
-            
+
             if direction in ['in', 'none']:
                 session_id = f"{truck}_{timestamp_str}"
             elif direction == 'out':
-                if truck and truck != 'na':
-                    query = "SELECT session_id FROM transactions WHERE truck = %s AND direction = 'in' ORDER BY datetime DESC LIMIT 1"
-                    cur.execute(query, (truck,))
-                    row = cur.fetchone()
-                    if row and row['session_id']:
-                        session_id = row['session_id']
-                    else:
-                        cur.close()
-                        conn.close()
-                        return {
-                            'status': 'error',
-                            'message': 'No prior IN transaction found for this truck'
-                        }
+                query = """
+                SELECT session_id, bruto, produce
+                FROM transactions
+                WHERE truck = %s AND direction = 'in'
+                ORDER BY datetime DESC
+                LIMIT 1
+                """
+                cur.execute(query, (truck,))
+                prior_in = cur.fetchone()
+                if prior_in and prior_in['session_id']:
+                    session_id = prior_in['session_id']
                 else:
                     cur.close()
                     conn.close()
                     return {
                         'status': 'error',
-                        'message': 'Truck required for OUT direction'
+                        'message': 'No prior IN transaction found for this truck'
                     }
             else:
                 cur.close()
@@ -120,8 +120,7 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                     'status': 'error',
                     'message': 'Invalid direction'
                 }
-            
-            # For OUT, check if already has OUT transaction
+
             if direction == 'out':
                 check_query = "SELECT id FROM transactions WHERE session_id = %s AND direction = 'out'"
                 cur.execute(check_query, (session_id,))
@@ -134,11 +133,21 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                             'message': 'Session already has an OUT transaction. Use force=true to overwrite.'
                         }
                     else:
-                        # Delete the existing OUT transaction
                         delete_query = "DELETE FROM transactions WHERE session_id = %s AND direction = 'out'"
                         cur.execute(delete_query, (session_id,))
                         conn.commit()
-            
+
+                in_bruto = int(prior_in['bruto'])
+
+                # 4. OUT weight cannot be bigger than matching IN weight
+                if bruto > in_bruto:
+                    cur.close()
+                    conn.close()
+                    return {
+                        'status': 'error',
+                        'message': 'OUT weight cannot be greater than the matching IN weight'
+                    }
+
             cur.close()
         except Error as e:
             if conn.is_connected():
@@ -148,22 +157,19 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                 'message': f'Database error: {str(e)}'
             }
 
-        # Handle direction logic
         if direction == 'out':
-            # For OUT: weight input is truckTara
+            # 5. incoming OUT weight is truckTara; bruto comes from matching IN
             truckTara = bruto
+            bruto_db = int(prior_in['bruto'])
 
-            # For OUT transactions, 'neto' is not calculated at the point of insertion.
-            # It is a session-level property. We store 0 in the transaction record.
+            # 6. OUT produce copied from matching IN
+            produce_db = prior_in['produce'] or 'na'
             neto_db = 0
         else:
-            # For IN and NONE: weight input is bruto, truckTara is always 0
             truckTara = 0
-            # For IN/NONE, neto is not calculated, store as 0 (displayed as 'na')
+            bruto_db = bruto
+            produce_db = produce
             neto_db = 0
-
-        # We already have a database connection
-
 
         try:
             cur = conn.cursor()
@@ -178,10 +184,10 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
                 direction,
                 truck,
                 containers,
-                bruto,
+                bruto_db,
                 truckTara,
                 neto_db,
-                produce,
+                produce_db,
                 unit,
                 session_id
             )
@@ -191,47 +197,43 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
             cur.close()
 
             if direction == 'out':
-                # Reuse session logic to calculate neto and get full session details
                 session_info = get_session_info(str(session_id))
                 if session_info['status'] == 'success':
                     sess_data = session_info['data']
                     summary = sess_data.get('session_summary', {})
-                    
+
                     neto_val = summary.get('calculated_neto', 'na')
                     if neto_val != 'na':
                         try:
                             neto_val = int(neto_val)
-                            
+
                             update_cur = conn.cursor()
                             update_cur.execute("UPDATE transactions SET neto = %s WHERE id = %s", (neto_val, transaction_id))
                             conn.commit()
                             update_cur.close()
                         except:
                             pass
-                    
-                    # For OUT, spec requires: id, truck, bruto (IN weight), truckTara (OUT weight), neto
+
                     response_data = {
                         'id': str(transaction_id),
                         'truck': truck,
-                        'bruto': summary.get('in_weight', 0),
-                        'truckTara': summary.get('out_weight', bruto),
+                        'bruto': bruto_db,
+                        'truckTara': truckTara,
                         'neto': neto_val,
                     }
                 else:
-                    # Fallback if session lookup fails
                     response_data = {
                         'id': str(transaction_id),
                         'truck': truck,
-                        'bruto': 0,
-                        'truckTara': bruto,
+                        'bruto': bruto_db,
+                        'truckTara': truckTara,
                         'neto': 'na',
                     }
             else:
-                # IN and NONE
                 response_data = {
                     'id': str(transaction_id),
                     'truck': truck,
-                    'bruto': bruto,
+                    'bruto': bruto_db,
                 }
 
             return {
@@ -256,6 +258,14 @@ def submit_weight_transaction(direction, truck, containers, bruto, unit, produce
             'status': 'error',
             'message': f'Unexpected error: {str(e)}'
         }
+
+
+# def get_container_tara(container_id):
+#     """
+#     Look up container tara weight from containers_registered table.
+#     Returns the weight or None if not found.
+#     """
+#     conn = get_conn()
 
 
 def get_container_tara(container_id):

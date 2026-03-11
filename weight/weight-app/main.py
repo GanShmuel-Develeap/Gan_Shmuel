@@ -92,26 +92,29 @@ def post_weight():
     data = request.get_json(silent=True) or request.form
     
     direction = data.get('direction')
-    truck = data.get('truck') or 'na'
+    truck = data.get('truck')
     containers = data.get('containers')
-    bruto = data.get('weight')  # API uses 'weight', maps to 'bruto' in code
+    bruto = data.get('weight') 
     unit = data.get('unit', 'kg')
     force_str = data.get('force', 'false')
     produce = data.get('produce') or 'na'
     
-    # Convert force to boolean
     force = force_str.lower() == 'true' if isinstance(force_str, str) else bool(force_str)
     
-    # Validate required fields
     if not direction or bruto is None:
         return jsonify({'status': 'error', 'message': 'Missing required fields: direction, weight'}), 400
     
     try:
         bruto = int(bruto)
-    except ValueError:
+    except (ValueError, TypeError):
         return jsonify({'status': 'error', 'message': 'Weight must be a number'}), 400
+
+    if direction in ['in', 'out'] and not (truck and str(truck).strip()):
+        return jsonify({'status': 'error', 'message': 'Truck is required for IN and OUT directions'}), 400
+
+    if bruto <= 0:
+        return jsonify({'status': 'error', 'message': 'Weight must be greater than 0'}), 400
     
-    # Call the service function
     result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce, force)
     
     if result['status'] == 'success':
@@ -259,6 +262,24 @@ def get_item(item_id):
         return jsonify({"error": "item not found"}), 404
 
     return jsonify(result)
-    
+
+@app.route("/transactions", methods=["GET"])
+def get_all_transactions_raw():
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("""
+        SELECT *
+        FROM transactions
+        ORDER BY id
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
