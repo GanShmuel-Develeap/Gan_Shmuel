@@ -9,7 +9,7 @@ git merge origin/devops --no-edit
 git merge origin/billing --no-edit
 git merge origin/weight --no-edit
 
-docker network create gan_shmuel_shared_prod
+docker network create gan_shmuel_shared_prod || true
 
 # 3. Launch the environment in the background
 # The -p flag ensures it's isolated from your testing branch
