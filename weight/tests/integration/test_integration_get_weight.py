@@ -27,7 +27,7 @@ def test_get_all_transactions_integration():
         conn.commit()
 
         client = app.test_client()
-        resp = client.get("/weight")
+        resp = client.get("/weight?from=20260310000000&to=20260310235959")
         data = resp.get_json()
 
         row = next(r for r in data if r["truck_id"] == "ITEST_TRUCK_1")
