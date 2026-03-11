@@ -49,3 +49,6 @@ Thumbs.db
 # IDE specific (VS Code / PyCharm)
 .vscode/
 .idea/
+
+# In folder
+in/
