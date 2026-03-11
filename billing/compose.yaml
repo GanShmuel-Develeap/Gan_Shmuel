@@ -1,5 +1,5 @@
 services:
-  db:
+  billing-db:
     image: mysql:8.0
     restart: always
     environment:
@@ -9,24 +9,25 @@ services:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
     volumes:
       # 1. Initialization script (Runs only on first start)
       - ./db/billingdb.sql:/docker-entrypoint-initdb.d/billingdb.sql
       # 2. Persistent data volume (Keeps your data safe)
       - mysql_data:/var/lib/mysql
-
+    ports:
+      - "3307:3306"
     networks:
       - internal_net
 
-  web:
+  billing-app:
     build: .
     ports:
-      - "5000:5000"
+      - "8080:5000"
     env_file:
       - .env
     depends_on:
-      db:
+      billing-db:
         condition: service_healthy
     volumes:
       - ./in:/in
