@@ -1,7 +1,7 @@
 services:
   weight-db:
     image: mysql:8.0
-    container_name: weight-mysql
+    container_name: weight-db
     restart: unless-stopped
     env_file: .env
     environment:
