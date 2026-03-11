@@ -1,4 +1,4 @@
-name: gan-shmuel-integration
+name: gan-shmuel-test
 
 include:
   - ../billing/compose.yaml
@@ -7,15 +7,4 @@ include:
 networks:
   gan_shmuel_shared:
     external: true
-
-services:
-  healthcheck:
-    image: busybox
-    depends_on:
-      billing-app:
-        condition: service_started
-      weight-app:
-        condition: service_started
-    networks:
-      - gan_shmuel_shared
-    command: sh -c "echo 'Integration successful'"
+    name: ${SHARED_NETWORK_NAME:-gan_shmuel_shared_test}
