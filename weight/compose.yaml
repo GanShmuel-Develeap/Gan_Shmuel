@@ -28,7 +28,7 @@ services:
     restart: unless-stopped
     env_file: .env
     ports:
-      - "${WEIGHT_PORT:-8081}:5000"
+      - "${WEIGHT_PORT:-8081}:6000"
     volumes:
       - ./in:/in
     depends_on:
