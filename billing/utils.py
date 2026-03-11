@@ -302,9 +302,8 @@ def get_provider_name(id):
     return False
 
 def get_valid_trucks(weight_list, provider_id):
-    # 1. Extract all unique truck IDs from your dictionary list
-    # A set ensures we don't send duplicate IDs to the DB
-    
+    #Extract all unique truck IDs from your dictionary list
+
     #for every item in weight_list if truck['truck_id'] is not already in the set enter it this ensures unique truck ids
     input_ids = list(set(item['truck_id'] for item in weight_list))
     
@@ -317,7 +316,7 @@ def get_valid_trucks(weight_list, provider_id):
         conn = get_connection()
         cursor = conn.cursor()
         
-        # 2. Build the dynamic 'IN' clause placeholders (%s, %s, %s...)
+        #Build the dynamic 'IN' clause placeholders (%s, %s, %s...)
         placeholders = ', '.join(['%s'] * len(input_ids))
         query = f"""
             SELECT id 
@@ -325,8 +324,8 @@ def get_valid_trucks(weight_list, provider_id):
             WHERE provider_id = %s AND id IN ({placeholders})
         """
         
-        # 3. Execute in ONE round-trip
-        # Pass provider_id first, then the list of IDs
+        #Execute in 1 trip
+        #Pass provider_id first, then the list of IDs
         cursor.execute(query, [provider_id] + input_ids)
         
         # Store results in a set for lightning-fast cross-referencing
@@ -341,7 +340,8 @@ def get_valid_trucks(weight_list, provider_id):
             cursor.close()
             conn.close()
 
-    # 4. Final cross-reference: Filter the original list
+    #cross-reference: Filter the original list
+
     # We only keep the dictionary if its 'id' exists in our 'valid_ids_from_db' set
 
     #for every truck in weight_list if truck['id'] is in valid_ids_from_db enter it to the list valid_trucks
@@ -354,16 +354,15 @@ def get_valid_trucks(weight_list, provider_id):
 
 def get_unique_trucks(valid_trucks):
     
-    # 1. Extract IDs and convert to a set to remove duplicates
-    # This is an O(n) operation
+    #Extract IDs and convert to a set to remove duplicates
 
     # get every unique truck in valid_trucks and enter it to dict
     unique_trucks = {truck['truck_id'] for truck in valid_trucks}
     
-    # 2. Convert back to a list
+    #Convert back to a list
     unique_trucks = list(unique_trucks)
     
-    # 3. Get the unique_trucks
+    #Return the unique_trucks
     return unique_trucks
 
 def get_rates_for_provider(id):
@@ -372,27 +371,14 @@ def get_rates_for_provider(id):
 
     try:
 
-        # Insert all rows at once
         query = """
             SELECT * 
             FROM Rates
         """
 
         cursor.execute(query)
-        
-        # Store results in a set for lightning-fast cross-referencing
 
-        # for every row in cursor.fetchall() get the first item row[0] 'id' 
         rates = {}
-
-        # for rate in cursor.fetchall():
-        #     if rate['scope'] == None:
-        #         if rate['product'] not in rates:
-        #             rates[rate['product']]['rate'] = rate['rate']
-
-        #     elif rate['scope'] == id:
-        #         rates[rate['product']]['rate'] = rate['rate']
-
 
         for row in cursor.fetchall():
             product = row['product_name']
@@ -415,7 +401,9 @@ def get_rates_for_provider(id):
     return rates, None
 
 def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
+
     id = truck_id
+
     name = get_provider_name(id)
     if not name:
         return None, "Provider not found"
@@ -430,7 +418,6 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
         "filter":"out"
     }
 
-
     weight_data, err = api_client.get_weights(params=params)
     if err:
         return None, "Error accessing weight server"
@@ -444,18 +431,11 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
     sessionCount = 0
     total = 0
 
-
-    # print(len(valid_trucks))
     sessionCount = len(valid_trucks)
-
-    # for truck in unique_trucks:
-    #     sessionCount += len(get_truck(truck['truck_id'],from_time,to_time)['sessions'])
-    
-    # print(sessionCount)
 
     unique_products = {}
     product_index = 0
-    products = []# json.dumps(list)
+    products = []
 
     #get rates for all produce in a dict
     rates,err = get_rates_for_provider(id)
@@ -484,7 +464,7 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
 
                 products[temp_index]['count'] += 1
 
-
+        #add new addition to products with tracked neto
         elif truck['produce'] not in unique_products:
             unique_products[truck['produce']] = product_index
             product_index += 1
@@ -499,6 +479,7 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
                 'rate': rate,
                 'pay': pay
                 })
+        #add data to products[temp_index]
         else:
             temp_index = unique_products[truck['produce']]
 
@@ -525,7 +506,7 @@ def get_bill_data(truck_id: str, from_dt=None, to_dt=None):
         #unique truck count from get_bill_data inner calculation 
         "truckCount": truckCount,
 
-        #session count for this provider from get_truck
+        #session count for this provider from get_bill_data inner calculation
         "sessionCount": sessionCount,
 
         #unique product list from get_bill_data inner calculation 
