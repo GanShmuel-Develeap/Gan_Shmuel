@@ -321,7 +321,7 @@ def get_valid_trucks(weight_list, provider_id):
         placeholders = ', '.join(['%s'] * len(input_ids))
         query = f"""
             SELECT id 
-            FROM trucks 
+            FROM Trucks 
             WHERE provider_id = %s AND id IN ({placeholders})
         """
         
@@ -373,9 +373,9 @@ def get_rates_for_provider(id):
     try:
 
         # Insert all rows at once
-        query = f"""
+        query = """
             SELECT * 
-            FROM rates
+            FROM Rates
         """
 
         cursor.execute(query)
@@ -395,7 +395,7 @@ def get_rates_for_provider(id):
 
 
         for row in cursor.fetchall():
-            product = row['product']
+            product = row['product_name']
             scope = row['scope']
             rate = row['rate']
 

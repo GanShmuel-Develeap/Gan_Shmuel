@@ -127,5 +127,6 @@ def get_bill(id):
         return jsonify({"error": err}), 404
     elif err == "error db connection failed":
         return jsonify({"error": err}), 500
-
+    elif err:
+        return jsonify({"error": err}), 500
     return jsonify(data), 200
