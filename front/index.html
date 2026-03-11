@@ -652,7 +652,7 @@
 
         <!-- ===== BILLS PAGE ===== -->
         <div id="page-bills" class="page">
-          <div class="fcard" style="max-width: 700px">
+          <div class="fcard" style="max-width: 800px">
             <div class="fcard-top">
               <div class="fcard-icon teal-icon">🧾</div>
               <div>
@@ -668,12 +668,12 @@
                 </select>
               </div>
               <div class="field">
-                <label>From (yyyymmddhhmmss)</label>
-                <input type="text" id="bill-from" placeholder="20260301000000" />
+                <label>From</label>
+                <input type="datetime-local" id="bill-from" />
               </div>
               <div class="field">
-                <label>To (yyyymmddhhmmss)</label>
-                <input type="text" id="bill-to" placeholder="20260311235959" />
+                <label>To</label>
+                <input type="datetime-local" id="bill-to" />
               </div>
             </div>
             <div class="btn-row" style="margin-top: 12px">
@@ -801,11 +801,14 @@
                   clearFields(
                     ['w-truck', 'w-containers', 'w-bruto', 'w-produce'],
                     'w-msg',
-                  )
+                  ); document.getElementById('w-force').checked = false;
                 "
               >
                 Clear
               </button>
+              <label style="display:flex; align-items:center; gap:6px; margin-left:12px; cursor:pointer; font-size:14px; color:var(--muted-text)">
+                <input type="checkbox" id="w-force" /> Force
+              </label>
             </div>
             <div class="msg" id="w-msg"></div>
           </div>

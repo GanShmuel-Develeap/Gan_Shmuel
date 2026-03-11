@@ -533,12 +533,33 @@ async function lookupTruck() {
 
 function loadBillPage() {
   populateProviderDropdowns();
+  // Set default dates: 1st of current month → now
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  document.getElementById('bill-from').value = `${y}-${m}-01T00:00`;
+  document.getElementById('bill-to').value = `${y}-${m}-${d}T${hh}:${mm}`;
+}
+
+// Convert datetime-local value ("2026-03-11T14:30") → API format ("20260311143000")
+function dtLocalToApi(val) {
+  if (!val) return '';
+  return val.replace(/[-T:]/g, '').padEnd(14, '0');
+}
+
+// Convert API format ("20260311143000") → readable ("2026-03-11 14:30")
+function fmtApiDate(s) {
+  if (!s || s.length < 12) return s || '';
+  return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)} ${s.slice(8,10)}:${s.slice(10,12)}`;
 }
 
 async function loadBill() {
   const providerId = document.getElementById("bill-provider-id")?.value?.trim();
-  const from = document.getElementById("bill-from")?.value?.trim();
-  const to = document.getElementById("bill-to")?.value?.trim();
+  const fromRaw = document.getElementById("bill-from")?.value?.trim();
+  const toRaw = document.getElementById("bill-to")?.value?.trim();
   const msgId = "bill-msg";
   const resultEl = document.getElementById("bill-result");
 
@@ -551,8 +572,8 @@ async function loadBill() {
   showMsg(msgId, "warn", "Generating bill…");
 
   const params = new URLSearchParams();
-  if (from) params.set("from", from);
-  if (to) params.set("to", to);
+  if (fromRaw) params.set("from", dtLocalToApi(fromRaw));
+  if (toRaw) params.set("to", dtLocalToApi(toRaw));
   const qs = params.toString() ? `?${params}` : "";
 
   const { ok, data } = await apiFetch(`/bill/${providerId}${qs}`);
@@ -566,11 +587,8 @@ async function loadBill() {
   clearMsg(msgId);
   resultEl.style.display = "block";
 
-  // Format dates for display
-  const fmtDate = (s) => s ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)} ${s.slice(8,10)}:${s.slice(10,12)}` : '';
-
   document.getElementById("bill-result-title").textContent =
-    `Bill — ${data.name} (#${data.id})  |  ${fmtDate(data.from)} → ${fmtDate(data.to)}`;
+    `Bill — ${data.name} (#${data.id})  |  ${fmtApiDate(data.from)} → ${fmtApiDate(data.to)}`;
   document.getElementById("bill-truck-count").textContent = data.truckCount;
   document.getElementById("bill-session-count").textContent = data.sessionCount;
   document.getElementById("bill-total").textContent =
@@ -758,6 +776,7 @@ async function submitWeight() {
   body.append("weight", document.getElementById("w-bruto").value);
   body.append("unit", document.getElementById("w-unit").value);
   body.append("produce", document.getElementById("w-produce").value);
+  body.append("force", document.getElementById("w-force").checked ? "true" : "false");
 
   showMsg(msgId, "warn", "Submitting...");
 
