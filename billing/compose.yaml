@@ -1,10 +1,12 @@
 services:
   billing-db:
+    container_name: ${BILLING_DB_CONT_NAME:-billing-db}
+    hostname: ${BILLING_DB_CONT_NAME:-billing-db}
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: billdb
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-password}
+      MYSQL_DATABASE: ${BILLING_DB_NAME:-billdb}
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
       interval: 5s
@@ -14,16 +16,19 @@ services:
       # 1. Initialization script (Runs only on first start)
       - ./db/billingdb.sql:/docker-entrypoint-initdb.d/billingdb.sql
       # 2. Persistent data volume (Keeps your data safe)
-      - mysql_data:/var/lib/mysql
+      - billing_mysql_data:/var/lib/mysql
     ports:
-      - "3307:3306"
+      - "${BILLING_DB_PORT:-3307}:3306"
     networks:
       - internal_net
+    domainname: ${DOMAIN_NAME:-prod.local}
 
   billing-app:
-    build: .
+    container_name: ${BILLING_APP_NAME:-billing-app}
+    hostname: ${BILLING_APP_NAME:-billing-app}
     ports:
-      - "8080:5000"
+      - "${BILLING_PORT:-8080}:5000"
+    build: .
     env_file:
       - .env
     depends_on:
@@ -32,14 +37,19 @@ services:
     volumes:
       - ./in:/in
     networks:
-      - gan_shmuel_shared 
-      - internal_net
+      gan_shmuel_shared:
+        aliases:
+          - ${BILLING_APP_NAME:-billing-app}
+      internal_net:
 # Define the named volume here
 volumes:
-  mysql_data:
+  billing_mysql_data:
+    name: ${BILLING_DATA_VOL:-billing_mysql_data}
 
 networks:
   gan_shmuel_shared:
+    name: ${SHARED_NETWORK_NAME}
     external: true
   internal_net:
+    name: ${INTERNAL_NET_NAME}
     driver: bridge

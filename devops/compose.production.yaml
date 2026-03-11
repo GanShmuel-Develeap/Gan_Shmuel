@@ -7,3 +7,4 @@ include:
 networks:
   gan_shmuel_shared:
     external: true
+    name: ${SHARED_NETWORK_NAME:-gan_shmuel_prod_shared}
