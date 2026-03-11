@@ -175,7 +175,7 @@ def get_unknown():
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute("SELECT container_id FROM containers_registered WHERE weight IS NULL")
+    cur.execute("SELECT container_id FROM containers_registered WHERE weight = 0 OR weight IS NULL")
     rows = cur.fetchall()
 
     cur.close()

@@ -566,8 +566,11 @@ async function loadBill() {
   clearMsg(msgId);
   resultEl.style.display = "block";
 
+  // Format dates for display
+  const fmtDate = (s) => s ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)} ${s.slice(8,10)}:${s.slice(10,12)}` : '';
+
   document.getElementById("bill-result-title").textContent =
-    `Bill — ${data.name} (#${data.id})`;
+    `Bill — ${data.name} (#${data.id})  |  ${fmtDate(data.from)} → ${fmtDate(data.to)}`;
   document.getElementById("bill-truck-count").textContent = data.truckCount;
   document.getElementById("bill-session-count").textContent = data.sessionCount;
   document.getElementById("bill-total").textContent =
