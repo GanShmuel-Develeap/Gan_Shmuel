@@ -1,0 +1,9 @@
+name: gan-shmuel-production
+
+include:
+  - ../billing/compose.yaml
+  - ../weight/compose.yaml
+
+networks:
+  gan_shmuel_shared:
+    external: true
