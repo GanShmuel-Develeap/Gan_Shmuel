@@ -3,7 +3,7 @@ import sys
 import os
 from unittest.mock import patch, MagicMock, mock_open
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../weight-app')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../weight-app')))
 from main import app
 
 class TestBatchWeight(unittest.TestCase):

@@ -16,6 +16,6 @@ CREATE TABLE IF NOT EXISTS `transactions` (
   `truckTara` int(12) DEFAULT NULL,
   `neto` int(12) DEFAULT NULL,
   `produce` varchar(50) DEFAULT NULL,
-  `session_id` int(12) DEFAULT NULL,
+  `session_id` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=10001 ;
