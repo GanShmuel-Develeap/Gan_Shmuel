@@ -1,5 +1,6 @@
 import os
-import time
+from datetime import datetime
+from flask import Flask, jsonify, render_template, request
 import json
 import csv
 import mysql.connector
@@ -8,6 +9,8 @@ from mock_routes import test_bp
 from db import get_conn
 from flask import Flask, jsonify, request
 from datetime import datetime
+from services.item_service import get_item_data
+from services.weight_service import submit_weight_transaction, get_session_info
 
 app = Flask(__name__)
 app.register_blueprint(test_bp)
@@ -82,6 +85,44 @@ def get_all_transactions():
     ])
 
 
+@app.route('/weight', methods=['POST'])
+def post_weight():
+    """Handle weight transaction API submission"""
+    # Support both JSON and form data
+    data = request.get_json(silent=True) or request.form
+    
+    direction = data.get('direction')
+    truck = data.get('truck')
+    containers = data.get('containers')
+    bruto = data.get('weight') 
+    unit = data.get('unit', 'kg')
+    force_str = data.get('force', 'false')
+    produce = data.get('produce') or 'na'
+    
+    force = force_str.lower() == 'true' if isinstance(force_str, str) else bool(force_str)
+    
+    if not direction or bruto is None:
+        return jsonify({'status': 'error', 'message': 'Missing required fields: direction, weight'}), 400
+    
+    try:
+        bruto = int(bruto)
+    except (ValueError, TypeError):
+        return jsonify({'status': 'error', 'message': 'Weight must be a number'}), 400
+
+    if direction in ['in', 'out'] and not (truck and str(truck).strip()):
+        return jsonify({'status': 'error', 'message': 'Truck is required for IN and OUT directions'}), 400
+
+    if bruto <= 0:
+        return jsonify({'status': 'error', 'message': 'Weight must be greater than 0'}), 400
+    
+    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce, force)
+    
+    if result['status'] == 'success':
+        return jsonify(result), 201
+    else:
+        return jsonify(result), 400
+
+
 def get_neto(containers_str, neto, unit, container_weights):
     if not containers_str:
         if unit == "lbs" and neto is not None:
@@ -114,6 +155,31 @@ def get_containers():
     conn.close()
 
     return jsonify(rows)
+
+
+@app.route('/session/<session_id>', methods=['GET'])
+def get_session(session_id):
+    """Get session information by session ID"""
+    result = get_session_info(session_id)
+    
+    if result['status'] == 'success':
+        return jsonify(result['data']), 200
+    else:
+        return jsonify(result), 404
+
+
+@app.route('/unknown', methods=['GET'])
+def get_unknown():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("SELECT container_id FROM containers_registered WHERE weight IS NULL")
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([row[0] for row in rows])
 
 @app.route('/batch-weight', methods=['POST'])
 def batch_weight():
@@ -157,6 +223,36 @@ def batch_weight():
         return jsonify({"message": "Batch processed", "count": len(data)}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/item/<item_id>', methods=['GET'])
+def get_item(item_id):
+    t1_str = request.args.get("from")
+    t2_str = request.args.get("to")
+
+    result = get_item_data(item_id, t1_str, t2_str)
+
+    if result is None:
+        return jsonify({"error": "item not found"}), 404
+
+    return jsonify(result)
+
+@app.route("/transactions", methods=["GET"])
+def get_all_transactions_raw():
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("""
+        SELECT *
+        FROM transactions
+        ORDER BY id
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
