@@ -203,13 +203,18 @@ def get_abandoned_sessions():
 
     conn = get_conn()
     cur = conn.cursor(dictionary=True)
-    query = f"""
-        SELECT session_id, MIN(datetime) AS first_in, truck
-        FROM transactions
-        WHERE direction IN ('in','none')
-        GROUP BY session_id
-        HAVING session_id NOT IN (SELECT session_id FROM transactions WHERE direction = 'out')
-          AND first_in < NOW() - INTERVAL %s SECOND
+    query = """
+        SELECT session_id, first_in
+        FROM (
+            SELECT session_id, MIN(datetime) AS first_in
+            FROM transactions
+            WHERE direction IN ('in', 'none')
+            GROUP BY session_id
+        ) AS open_sessions
+        WHERE session_id NOT IN (
+            SELECT session_id FROM transactions WHERE direction = 'out'
+        )
+        AND first_in < NOW() - INTERVAL %s SECOND
     """
     cur.execute(query, (timeout,))
     rows = cur.fetchall()

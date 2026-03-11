@@ -25,9 +25,8 @@ def test_abandoned_sessions_endpoint():
     client = app.test_client()
 
     # create an IN transaction
-direction = "in"
     payload = {
-        "direction": direction,
+        "direction": "in",
         "truck": "ABANDON-TRUCK",
         "containers": "C-X",
         "weight": 1234,
