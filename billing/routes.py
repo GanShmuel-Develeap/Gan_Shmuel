@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify, request,send_file
 from utils import create_provider, update_provider, upload_rates, get_rates_file_path,health_check
-from utils import get_truck, create_truck, update_truck
+from utils import get_truck, create_truck, update_truck, get_providers
 from utils import get_bill_data
+
 import mysql.connector
 bill_bp = Blueprint('bill', __name__)
 
@@ -15,7 +16,13 @@ def get_health():
         return jsonify({"message": "Failure"}), 500
 
 
-@bill_bp.route("/provider", methods=["POST"])
+@bill_bp.route("/provider", methods=["GET"])
+def get_providers_route():
+    providers = get_providers()  
+    return jsonify(providers), 200
+
+
+@bill_bp.route("/providers", methods=["POST"])
 def create_provider_route():
     data = request.get_json()
     name = data.get("name") if data else None
@@ -27,6 +34,7 @@ def create_provider_route():
         return jsonify({"error": err}), 409
 
     return jsonify({"id": str(provider_id)}), 201
+
 
 
 @bill_bp.route("/provider/<int:id>", methods=["PUT"])
