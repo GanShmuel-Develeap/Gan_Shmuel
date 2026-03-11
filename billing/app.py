@@ -4,7 +4,7 @@ from routes import bill_bp
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 app.register_blueprint(bill_bp)
 

@@ -14,7 +14,7 @@ from services.item_service import get_item_data
 from services.weight_service import submit_weight_transaction, get_session_info
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 app.register_blueprint(test_bp)
 print(app.url_map)
 
