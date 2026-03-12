@@ -26,7 +26,7 @@ cd [$(pwd)/Gan_Shmuel/devops]
 **3. Give permission to script ****
 ```bash
 
-sudo chmo[d +x ./production.sh]
+sudo chmod +x [ ./production.sh]
 
 **4. Run the script ****
 ```bash
