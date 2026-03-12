@@ -7,10 +7,10 @@ import mysql.connector
 from mysql.connector import Error
 from mock_routes import test_bp
 from db import get_conn
-from weight_service import submit_weight_transaction, get_session_info
 from flask import Flask, jsonify, request
 from datetime import datetime
 from services.item_service import get_item_data
+from services.weight_service import submit_weight_transaction, get_session_info
 
 app = Flask(__name__)
 app.register_blueprint(test_bp)
@@ -85,6 +85,44 @@ def get_all_transactions():
     ])
 
 
+@app.route('/weight', methods=['POST'])
+def post_weight():
+    """Handle weight transaction API submission"""
+    # Support both JSON and form data
+    data = request.get_json(silent=True) or request.form
+    
+    direction = data.get('direction')
+    truck = data.get('truck')
+    containers = data.get('containers')
+    bruto = data.get('weight') 
+    unit = data.get('unit', 'kg')
+    force_str = data.get('force', 'false')
+    produce = data.get('produce') or 'na'
+    
+    force = force_str.lower() == 'true' if isinstance(force_str, str) else bool(force_str)
+    
+    if not direction or bruto is None:
+        return jsonify({'status': 'error', 'message': 'Missing required fields: direction, weight'}), 400
+    
+    try:
+        bruto = int(bruto)
+    except (ValueError, TypeError):
+        return jsonify({'status': 'error', 'message': 'Weight must be a number'}), 400
+
+    if direction in ['in', 'out'] and not (truck and str(truck).strip()):
+        return jsonify({'status': 'error', 'message': 'Truck is required for IN and OUT directions'}), 400
+
+    if bruto <= 0:
+        return jsonify({'status': 'error', 'message': 'Weight must be greater than 0'}), 400
+    
+    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce, force)
+    
+    if result['status'] == 'success':
+        return jsonify(result), 201
+    else:
+        return jsonify(result), 400
+
+
 def get_neto(containers_str, neto, unit, container_weights):
     if not containers_str:
         if unit == "lbs" and neto is not None:
@@ -117,33 +155,6 @@ def get_containers():
     conn.close()
 
     return jsonify(rows)
-
-@app.route('/weight-form', methods=['GET'])
-def weight_form():
-    """Serve the weight form HTML"""
-    return render_template('weight_form.html')
-
-
-
-@app.route('/weight-form', methods=['POST'])
-def weight_submit():
-    """Handle weight transaction form submission"""
-    # Get form data
-    direction = request.form.get('direction')
-    truck = request.form.get('truck')
-    containers = request.form.get('containers')
-    bruto = request.form.get('bruto')
-    unit = request.form.get('unit', 'kg')
-    produce = request.form.get('produce') or 'na'
-
-    # Call the service function
-    result = submit_weight_transaction(direction, truck, containers, bruto, unit, produce)
-
-    # Return appropriate response
-    if result['status'] == 'success':
-        return jsonify(result), 201
-    else:
-        return jsonify(result), 400
 
 
 @app.route('/session/<session_id>', methods=['GET'])
@@ -224,6 +235,24 @@ def get_item(item_id):
         return jsonify({"error": "item not found"}), 404
 
     return jsonify(result)
-    
+
+@app.route("/transactions", methods=["GET"])
+def get_all_transactions_raw():
+    conn = get_conn()
+    cur = conn.cursor(dictionary=True)
+
+    cur.execute("""
+        SELECT *
+        FROM transactions
+        ORDER BY id
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify(rows)
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
