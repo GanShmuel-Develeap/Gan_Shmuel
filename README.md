@@ -1,51 +1,8 @@
-Gan Shmuel Project
-Welcome to the Gan Shmuel repository. This project is structured to handle automated CI/CD workflows and multi-service deployments using Docker and Bash scripting.
-
-🚀 Getting Started
-Follow these steps to set up the environment and trigger the production deployment.
-
-1. Clone the Repository
-First, clone the project to your local machine or EC2 instance using SSH:
-
-Bash
-git clone git@github.com:GanShmuel-Develeap/Gan_Shmuel.git
-cd Gan_Shmuel
-2. Navigate to the DevOps Directory
-All infrastructure and deployment scripts are centralized within the devops folder:
-
-Bash
-cd devops
-3. Run the Production Script
-To deploy the integrated environment, execute the production script. Ensure you have the necessary permissions to run bash scripts and interface with Docker:
-
-Bash
-chmod +x production.sh
-./production.sh
-🛠 Project Structure
-/billing: Contains the Billing service logic, Dockerfile, and unit/integration tests.
-
-/weight: Contains the Weight service logic, Dockerfile, and unit/integration tests.
-
-/devops: Contains the CI/CD pipeline scripts (pipeline.sh), E2E tests, and the final production deployment logic.
-
-🧪 CI/CD Workflow
-The project utilizes a pipeline.sh script that automates the following:
-
-Branch Syncing: Fetches the latest code from the specified branch.
-
-Testing: Runs Unit and Integration tests within Docker containers.
-
-Health Checks: Verifies connectivity between services and databases (e.g., billing-db to weight-db).
-
-Slack Integration: Sends real-time status reports to the team.
-
-Promotion: Automatically promotes stable code to the devops branch for E2E verification.
-
-📋 Prerequisites
-Docker & Docker Compose: Ensure both are installed and the daemon is running.
-
-Git: Configured with SSH access to the GitHub repository.
-
-Environment Variables: A .env file should be present in the root directory containing your SLACK_WEBHOOK_URL for notifications.
-
-Would you like me to add a "Troubleshooting" section to this README with common Docker network and permission fixes?
+🏗️ Gan Shmuel Project<p align="left"><img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" /><img src="https://img.shields.io/badge/bash_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white" /><img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" /><img src="https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white" /></p>Managing and deploying the Gan Shmuel microservices ecosystem is simplified through automated scripts. This repository provides a seamless transition from local development to production-ready environments on AWS EC2.🚀 Quick StartFollow these steps to deploy. You can copy each command using the icon on the right:Clone the repositoryBashgit clone https://github.com/GanShmuel-Develeap/Gan_Shmuel.git
+Enter the devops directoryBashcd Gan_Shmuel/devops
+Initialize permissionsBashchmod +x production.sh
+Run the production deploymentBash./production.sh
+🛠️ How It WorksThe project is designed for DevOps Engineers to manage multi-container deployments with high confidence. The workflow follows a strict "Test-then-Promote" loop handled by the pipeline.sh utility.Sync: Pulls the latest code from your feature branch.Verify: Builds Docker images and executes Pytest unit/integration suites.Validate: Performs a cross-container database ping (billing-db to weight-db).Promote: Stable code is merged into the devops branch for E2E testing.💻 Useful CommandsCommandPurposebash pipeline.sh <branch>Runs full CI/CD: Sync, Test, DB Check, and Slack Reportbash check_health.shManual tool to test connectivity between services🛡️ Key Features📡 Smart Health Checks: Uses Native Bash TCP Sockets (/dev/tcp) to verify ports are open, ensuring the script works even in minimal images without curl.💬 Slack Integration: Real-time feedback identifying the Triggering User from Git logs with a detailed breakdown of connectivity status.🔄 Automated Promotion: Gatekeeper logic that automatically promotes stable code to the devops branch for final verification.🧪 Self-Improving WorkflowIf you have local changes on the EC2 instance you aren't ready to commit, use the Stash pattern:Bashgit stash               # Hide your current manual edits
+bash pipeline.sh weight # Run the automated deployment
+git stash pop           # Re-apply your local tweaks
+Would you like me to help you set up a pre-commit hook that runs these health checks automatically before you push code?
