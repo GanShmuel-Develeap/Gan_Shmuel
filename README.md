@@ -1,4 +1,3 @@
-# Gan_Shmuel
 Gan Shmuel Project
 Welcome to the Gan Shmuel repository. This project is structured to handle automated CI/CD workflows and multi-service deployments using Docker and Bash scripting.
 
@@ -49,4 +48,4 @@ Git: Configured with SSH access to the GitHub repository.
 
 Environment Variables: A .env file should be present in the root directory containing your SLACK_WEBHOOK_URL for notifications.
 
-Would you like me to add a "Troubleshooting" section to this README with common Docker network and permission fixes
+Would you like me to add a "Troubleshooting" section to this README with common Docker network and permission fixes?
