@@ -1,8 +1,33 @@
-🏗️ Gan Shmuel Project<p align="left"><img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" /><img src="https://img.shields.io/badge/bash_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white" /><img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" /><img src="https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white" /></p>Managing and deploying the Gan Shmuel microservices ecosystem is simplified through automated scripts. This repository provides a seamless transition from local development to production-ready environments on AWS EC2.🚀 Quick StartFollow these steps to deploy. You can copy each command using the icon on the right:Clone the repositoryBashgit clone https://github.com/GanShmuel-Develeap/Gan_Shmuel.git
-Enter the devops directoryBashcd Gan_Shmuel/devops
-Initialize permissionsBashchmod +x production.sh
-Run the production deploymentBash./production.sh
-🛠️ How It WorksThe project is designed for DevOps Engineers to manage multi-container deployments with high confidence. The workflow follows a strict "Test-then-Promote" loop handled by the pipeline.sh utility.Sync: Pulls the latest code from your feature branch.Verify: Builds Docker images and executes Pytest unit/integration suites.Validate: Performs a cross-container database ping (billing-db to weight-db).Promote: Stable code is merged into the devops branch for E2E testing.💻 Useful CommandsCommandPurposebash pipeline.sh <branch>Runs full CI/CD: Sync, Test, DB Check, and Slack Reportbash check_health.shManual tool to test connectivity between services🛡️ Key Features📡 Smart Health Checks: Uses Native Bash TCP Sockets (/dev/tcp) to verify ports are open, ensuring the script works even in minimal images without curl.💬 Slack Integration: Real-time feedback identifying the Triggering User from Git logs with a detailed breakdown of connectivity status.🔄 Automated Promotion: Gatekeeper logic that automatically promotes stable code to the devops branch for final verification.🧪 Self-Improving WorkflowIf you have local changes on the EC2 instance you aren't ready to commit, use the Stash pattern:Bashgit stash               # Hide your current manual edits
-bash pipeline.sh weight # Run the automated deployment
-git stash pop           # Re-apply your local tweaks
-Would you like me to help you set up a pre-commit hook that runs these health checks automatically before you push code?
+🏗️ Gan Shmuel Project
+
+<p align="left">
+  <img src="https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/bash_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white" />
+  <img src="https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54" />
+  <img src="https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-aws&logoColor=white" />
+</p>
+
+Managing and deploying the **Gan Shmuel** microservices ecosystem is simplified through automated scripts. This repository provides a seamless transition from local development to production-ready environments on AWS EC2.
+
+---
+
+### 🚀 Quick Start
+
+Follow these steps to deploy. You can copy each command using the icon on the right:
+
+**1. Clone the repository**
+```bash
+git clone [https://github.com/GanShmuel-Develeap/Gan_Shmuel.git](https://github.com/GanShmuel-Develeap/Gan_Shmuel.git)
+
+**2. Navigate to devops repo ****
+```bash
+cd [$(pwd)/Gan_Shmuel/devops]
+
+**3. Give permission to script ****
+```bash
+
+sudo chmo[d +x ./production.sh]
+
+**4. Run the script ****
+```bash
+[./production.sh]
