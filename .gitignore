@@ -32,8 +32,8 @@ logs/
 
 # === Databases ===
 # Prevent accidental commits of SQL dumps or SQLite files
-*.sql
 *.sqlite3
+
 # NOTE: Do NOT ignore your 'migrations/' folder if using Alembic or Django
 
 # === Security & OS ===
