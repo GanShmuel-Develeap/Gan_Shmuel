@@ -17,17 +17,17 @@ Follow these steps to deploy. You can copy each command using the icon on the ri
 
 **1. Clone the repository**
 ```bash
-git clone [https://github.com/GanShmuel-Develeap/Gan_Shmuel.git](https://github.com/GanShmuel-Develeap/Gan_Shmuel.git)
-
-**2. Navigate to devops repo ****
-```bash
-cd [$(pwd)/Gan_Shmuel/devops]
-
-**3. Give permission to script ****
-```bash
-
-sudo chmod +x [ ./production.sh]
-
-**4. Run the script ****
-```bash
-[./production.sh]
+git clone git@github.com:GanShmuel-Develeap/Gan_Shmuel.git
+```
+**2. Navigate to devops repo**
+```
+cd /Gan_Shmuel/devops
+```
+**3. Give permission to script**
+```
+sudo chmod +x ./production.sh
+```
+**4. Run the script**
+```
+./production.sh
+```
