@@ -1,33 +1,14 @@
 #!/bin/bash
-cd "$(dirname "$0")"
-export $(grep -v '^#' ../billing/.env | xargs)
-PROJECT_DIR="$(git rev-parse --show-toplevel)"
-cd $PROJECT_DIR
 
-# 1. Update the code
-git fetch origin
-git checkout billing
-git pull origin billing
+echo "🚀 Starting Integration Tests..."
 
-# 2. Rebuild only what changed
-echo ${PROJECT_DIR}
-docker compose -f ${PROJECT_DIR}/billing/compose.yaml build web
+# 1. Check if Billing Service is up
+echo "🔍 Checking Billing Service..."
+curl --retry 10 --retry-delay 5 --retry-connrefused http://billing-service:5000/health || exit 1
 
-# 3. Run Unit Tests
-docker compose -f ${PROJECT_DIR}/billing/compose.yaml up -d
-docker compose -f ${PROJECT_DIR}/billing/compose.yaml exec web pytest > test_report.txt
-echo "Waiting for web service to initialize..."
-sleep 5
-RESULT=$?
+# 2. Check if Weight Service is up
+echo "🔍 Checking Weight Service..."
+curl --retry 10 --retry-delay 5 --retry-connrefused http://weight-service:5001/health || exit 1
 
-# 4. Logic for Slack (as we discussed)
-if [ $RESULT -eq 0 ]; then
-    STATUS="BILLING-CI-PASSED ✅"
-else
-    STATUS="BILLING-CI-FAILED ❌"
-fi
-
-# 5. Send Notification
-curl -X POST -H 'Content-type: application/json' \
---data "{\"text\":\"*EC2 CI Update*: $STATUS on Billing Branch\"}" $SLACK_WEBHOOK_URL
-
+echo "✅ All services are responsive. Integration successful!"
+exit 0

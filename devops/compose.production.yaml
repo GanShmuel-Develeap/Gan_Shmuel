@@ -1,0 +1,25 @@
+name: gan-shmuel-production
+
+include:
+  - ../billing/compose.yaml
+  - ../weight/compose.yaml
+
+services:
+  front-app:
+    build:
+      context: ../front
+      dockerfile: Dockerfile
+    ports:
+      - "8089:80"
+    networks:
+      - gan_shmuel_shared
+    depends_on:
+      billing-app:
+        condition: service_started
+      weight-app:
+        condition: service_started
+
+networks:
+  gan_shmuel_shared:
+    external: true
+    name: ${SHARED_NETWORK_NAME:-gan_shmuel_prod_shared}

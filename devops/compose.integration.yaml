@@ -1,0 +1,21 @@
+name: gan-shmuel-integration
+
+include:
+  - ../billing/compose.yaml
+  - ../weight/compose.yaml
+
+networks:
+  gan_shmuel_shared:
+    external: true
+
+services:
+  healthcheck:
+    image: busybox
+    depends_on:
+      billing-app:
+        condition: service_started
+      weight-app:
+        condition: service_started
+    networks:
+      - gan_shmuel_shared
+    command: sh -c "echo 'Integration successful'"

@@ -1,0 +1,13 @@
+FROM alpine:latest
+
+# Install bash and curl (essential for the pipeline script)
+RUN apk add --no-cache bash curl
+
+WORKDIR /app
+
+# Copy the pipeline script that the bash script pulled from main
+COPY pipeline.sh .
+RUN chmod +x pipeline.sh
+
+# Run the pipeline script when the container starts
+ENTRYPOINT ["/bin/bash", "./pipeline.sh"]

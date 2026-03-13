@@ -64,6 +64,18 @@ def get_providers():
     return providers
 
 
+def list_trucks():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT t.id, t.provider_id, p.name AS provider_name FROM Trucks t LEFT JOIN Provider p ON t.provider_id = p.id ORDER BY t.id")
+        rows = cursor.fetchall()
+        cursor.close(); conn.close()
+        return rows, None
+    except Exception as e:
+        return None, str(e)
+
+
 def update_provider(provider_id: int, name: str):
     conn = get_connection()
     cursor = conn.cursor()
@@ -314,7 +326,7 @@ def get_valid_trucks(weight_list, provider_id):
     #Extract all unique truck IDs from your dictionary list
 
     #for every item in weight_list if truck['truck_id'] is not already in the set enter it this ensures unique truck ids
-    input_ids = list(set(item['truck_id'] for item in weight_list))
+    input_ids = list(set(item['truck_id'].upper() for item in weight_list))
     
     if not input_ids:
         return []
@@ -340,7 +352,7 @@ def get_valid_trucks(weight_list, provider_id):
         # Store results in a set for lightning-fast cross-referencing
 
         # for every row in cursor.fetchall() get the first item row[0] 'id' 
-        valid_ids_from_db = {row[0] for row in cursor.fetchall()}
+        valid_ids_from_db = {row[0].upper() for row in cursor.fetchall()}
         
     except mysql.connector.Error as err:
         print(f"Database Error: {err}")
@@ -356,7 +368,7 @@ def get_valid_trucks(weight_list, provider_id):
     #for every truck in weight_list if truck['id'] is in valid_ids_from_db enter it to the list valid_trucks
     valid_trucks = [
         truck for truck in weight_list 
-        if truck['truck_id'] in valid_ids_from_db
+        if truck['truck_id'].upper() in valid_ids_from_db
     ]
     
     return valid_trucks
